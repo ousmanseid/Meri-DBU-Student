@@ -18,6 +18,7 @@ import { WorkflowService } from '../services/workflow.service.js';
 import { StudentService } from '../services/student.service.js';
 import { AnnouncementService } from '../services/announcement.service.js';
 import { DocumentService } from '../services/document.service.js';
+import { NotificationService } from '../services/notification.service.js';
 import { RagService } from '../services/rag.service.js';
 import { AuditService } from '../services/audit.service.js';
 
@@ -591,6 +592,40 @@ apiRouter.get('/documents/:id/download', async (req: AuthenticatedRequest, res, 
     res.setHeader('Content-Type', download.mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${download.filename}"`);
     res.send(download.fileContent);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ------------------------------------------------------------------------------
+// NOTIFICATION CENTER (Section 15)
+// ------------------------------------------------------------------------------
+apiRouter.get('/notifications', requireAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const notifications = await NotificationService.getUserNotifications(userId);
+    const unreadCount = await NotificationService.getUnreadCount(userId);
+    res.json({ success: true, notifications, unreadCount });
+  } catch (err) {
+    next(err);
+  }
+});
+
+apiRouter.patch('/notifications/:id/read', requireAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    await NotificationService.markAsRead(req.params.id as string, userId);
+    res.json({ success: true, message: 'Notification marked as read.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+apiRouter.post('/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    await NotificationService.markAllAsRead(userId);
+    res.json({ success: true, message: 'All notifications marked as read.' });
   } catch (err) {
     next(err);
   }

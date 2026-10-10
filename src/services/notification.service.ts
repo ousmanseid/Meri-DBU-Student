@@ -49,4 +49,18 @@ export class NotificationService {
       [notificationId, userId]
     );
   }
+
+  static async markAllAsRead(userId: string) {
+    const db = await getDb();
+    await db.query(`UPDATE notifications SET is_read = TRUE WHERE user_id = $1`, [userId]);
+  }
+
+  static async getUnreadCount(userId: string): Promise<number> {
+    const db = await getDb();
+    const res = await db.query(
+      `SELECT COUNT(*)::int as count FROM notifications WHERE user_id = $1 AND is_read = FALSE`,
+      [userId]
+    );
+    return res.rows[0]?.count || 0;
+  }
 }

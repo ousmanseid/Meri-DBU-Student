@@ -825,5 +825,45 @@ describe('Meri DBU Student: Master Verification Test Suite (Section 18)', () => 
     expect(studentCheckRes.status).toBe(200);
     expect(studentCheckRes.body.document.title).toBe('DBU 2026 Semester 1 Grading Calendar Directive');
   });
+
+  // Scenario 31: Notification center tracks student alerts, unread counts, and read states
+  it('Scenario 31: Notification center tracks student alerts, unread counts, and read states', async () => {
+    // 1. Fetch freshman notifications (generated during account activation)
+    const listRes = await request(app)
+      .get('/api/v1/notifications')
+      .set('Authorization', `Bearer ${freshmanToken}`);
+
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.success).toBe(true);
+    expect(listRes.body.notifications.length).toBeGreaterThanOrEqual(1);
+    expect(listRes.body.unreadCount).toBeGreaterThanOrEqual(1);
+
+    const targetNotif = listRes.body.notifications[0];
+    expect(targetNotif.is_read).toBe(false);
+
+    // 2. Mark specific notification as read
+    const readRes = await request(app)
+      .patch(`/api/v1/notifications/${targetNotif.id}/read`)
+      .set('Authorization', `Bearer ${freshmanToken}`);
+
+    expect(readRes.status).toBe(200);
+    expect(readRes.body.success).toBe(true);
+
+    // 3. Bulk mark all remaining notifications as read
+    const markAllRes = await request(app)
+      .post('/api/v1/notifications/mark-all-read')
+      .set('Authorization', `Bearer ${freshmanToken}`);
+
+    expect(markAllRes.status).toBe(200);
+    expect(markAllRes.body.success).toBe(true);
+
+    // 4. Verify unread count is now 0
+    const checkRes = await request(app)
+      .get('/api/v1/notifications')
+      .set('Authorization', `Bearer ${freshmanToken}`);
+
+    expect(checkRes.status).toBe(200);
+    expect(checkRes.body.unreadCount).toBe(0);
+  });
 });
 

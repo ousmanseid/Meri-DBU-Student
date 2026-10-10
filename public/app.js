@@ -94,12 +94,27 @@ class MeriApp {
 
     if (this.user && this.token) {
       container.innerHTML = `
+        <div class="notif-bell-container">
+          <button class="notif-bell-btn" onclick="app.toggleNotifications()" title="Alerts & Notifications">
+            🔔<span id="notif-badge" class="notif-badge" style="display: none;">0</span>
+          </button>
+          <div class="notif-panel" id="notif-panel">
+            <div class="notif-header">
+              <h4>Alerts & Notifications</h4>
+              <button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="app.markAllNotificationsRead()">Mark all read</button>
+            </div>
+            <ul class="notif-list" id="notif-list-container">
+              <li style="padding: 1rem; text-align: center; color: var(--dbu-text-muted); font-size: 0.85rem;">No new notifications</li>
+            </ul>
+          </div>
+        </div>
         <div class="user-badge">
           <span class="role-pill">${this.user.roles[0] || 'USER'}</span>
           <span style="font-size: 0.85rem; font-weight: 600; color: #ffffff;">${this.user.username}</span>
           <button class="nav-btn" style="padding: 0.2rem 0.6rem; font-size: 0.8rem;" onclick="app.logout()">Sign Out</button>
         </div>
       `;
+      this.pollNotifications();
       // Show dashboard panes
       if (document.getElementById('student-unauth-notice')) document.getElementById('student-unauth-notice').style.display = 'none';
       if (document.getElementById('student-dashboard-content')) document.getElementById('student-dashboard-content').style.display = 'block';
@@ -823,6 +838,76 @@ class MeriApp {
     } catch {
       // Error handled in api()
     }
+  }
+
+  // --- Notification Center ---
+  async pollNotifications() {
+    if (!this.token) return;
+    try {
+      const data = await this.api('/notifications');
+      const count = data.unreadCount || 0;
+      const badge = document.getElementById('notif-badge');
+      if (badge) {
+        if (count > 0) {
+          badge.textContent = count > 9 ? '9+' : String(count);
+          badge.style.display = 'flex';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+
+      const list = document.getElementById('notif-list-container');
+      if (list && data.notifications) {
+        if (data.notifications.length === 0) {
+          list.innerHTML = `<li style="padding: 1.5rem; text-align: center; color: var(--dbu-text-muted); font-size: 0.85rem;">You have no notifications.</li>`;
+          return;
+        }
+
+        list.innerHTML = data.notifications
+          .map((n) => {
+            const timeAgo = new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return `
+              <li class="notif-item ${n.is_read ? '' : 'unread'}" onclick="app.markNotificationRead('${n.id}')">
+                <div class="notif-title">
+                  <span>${this.escapeHtml(n.title)}</span>
+                  <span class="notif-time">${timeAgo}</span>
+                </div>
+                <div class="notif-message">${this.escapeHtml(n.message)}</div>
+              </li>
+            `;
+          })
+          .join('');
+      }
+    } catch {
+      // Background poll failure
+    }
+  }
+
+  toggleNotifications() {
+    const panel = document.getElementById('notif-panel');
+    if (!panel) return;
+    const isActive = panel.classList.contains('active');
+    if (isActive) {
+      panel.classList.remove('active');
+    } else {
+      panel.classList.add('active');
+      this.pollNotifications();
+    }
+  }
+
+  async markNotificationRead(id) {
+    try {
+      await this.api(`/notifications/${id}/read`, { method: 'PATCH' });
+      await this.pollNotifications();
+    } catch {}
+  }
+
+  async markAllNotificationsRead() {
+    try {
+      await this.api('/notifications/mark-all-read', { method: 'POST' });
+      this.showToast('All notifications marked as read.', 'info');
+      await this.pollNotifications();
+    } catch {}
   }
 
   // --- Modals & Toasts ---
