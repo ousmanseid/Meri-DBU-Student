@@ -16,6 +16,7 @@ class MeriApp {
   init() {
     this.updateAuthUi();
     this.loadPublicAnnouncements();
+    this.loadDocuments();
     if (this.user) {
       this.routeToAuthorizedDashboard();
     }
@@ -57,6 +58,7 @@ class MeriApp {
     if (targetNav) targetNav.classList.add('active');
 
     // Trigger tab-specific data loading
+    if (tabName === 'documents') this.loadDocuments();
     if (tabName === 'student' && this.user) this.loadStudentData();
     if (tabName === 'dean' && this.user) this.loadDeanData();
     if (tabName === 'registrar' && this.user) this.loadRegistrarData();
@@ -81,6 +83,14 @@ class MeriApp {
   updateAuthUi() {
     const container = document.getElementById('auth-nav-container');
     if (!container) return;
+
+    const uploadBtn = document.getElementById('btn-open-upload-doc');
+    if (uploadBtn) {
+      const isStaff = this.user && (this.user.roles || []).some((r) =>
+        ['SYSTEM_ADMIN', 'REGISTRAR', 'AI_KNOWLEDGE_ADMIN', 'DEAN'].includes(r)
+      );
+      uploadBtn.style.display = isStaff ? 'inline-block' : 'none';
+    }
 
     if (this.user && this.token) {
       container.innerHTML = `
@@ -667,6 +677,152 @@ class MeriApp {
       const data = await this.api('/announcements');
       // Already populated with high-quality defaults; can augment dynamically
     } catch {}
+  }
+
+  // --- Official Document Repository ---
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+  }
+
+  async loadDocuments(category, search) {
+    const container = document.getElementById('documents-grid-container');
+    if (!container) return;
+
+    const cat = category || document.getElementById('doc-category-filter')?.value || 'ALL';
+    const q = search !== undefined ? search : document.getElementById('doc-search-input')?.value || '';
+
+    try {
+      const queryParams = new URLSearchParams();
+      if (cat && cat !== 'ALL') queryParams.set('category', cat);
+      if (q && q.trim()) queryParams.set('search', q.trim());
+
+      const url = `/documents${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const data = await this.api(url);
+      const docs = data.documents || [];
+
+      if (docs.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="grid-column: 1 / -1; text-align: center; color: var(--dbu-text-muted); padding: 2.5rem 1rem;">
+            No official university documents found matching the filter criteria.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = docs
+        .map((doc) => {
+          const scopeBadge =
+            doc.access_scope === 'PUBLIC'
+              ? '<span class="badge badge-success">PUBLIC ACCESS</span>'
+              : doc.access_scope === 'STUDENT_ONLY'
+              ? '<span class="badge badge-info">STUDENT ACCESS</span>'
+              : '<span class="badge badge-warning">STAFF CLEARANCE</span>';
+
+          const categoryLabel = (doc.category || 'GENERAL').replace(/_/g, ' ');
+          const kbSize = Math.round((doc.file_size || 0) / 1024);
+
+          return `
+            <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: 0.5rem;">
+                  <span class="badge badge-neutral" style="font-size: 0.7rem;">${categoryLabel}</span>
+                  ${scopeBadge}
+                </div>
+                <h3 style="font-size: 1.05rem; margin-bottom: 0.4rem; color: var(--dbu-text);">${this.escapeHtml(doc.title)}</h3>
+                <p style="font-size: 0.82rem; color: var(--dbu-text-muted); margin-bottom: 1rem;">
+                  Institutional Publication • Version ${doc.version_label || '1.0'}<br>
+                  ${doc.department_name ? `Dept: ${this.escapeHtml(doc.department_name)} • ` : ''}Approx ${kbSize} KB • Verified DBU Electronic Record
+                </p>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--dbu-border); padding-top: 0.75rem;">
+                <span style="font-size: 0.75rem; color: var(--dbu-text-light);">Official PDF</span>
+                <button class="btn btn-outline" style="padding: 0.35rem 0.85rem; font-size: 0.82rem;" onclick="app.downloadDocument('${doc.id}', '${this.escapeHtml(doc.title)}')">
+                  ⬇ Download Official File
+                </button>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    } catch (err) {
+      container.innerHTML = `<div class="card" style="grid-column: 1 / -1; color: var(--color-danger); text-align: center;">Failed to load documents: ${err.message}</div>`;
+    }
+  }
+
+  filterDocuments() {
+    this.loadDocuments();
+  }
+
+  async downloadDocument(id, title) {
+    try {
+      this.showToast(`Preparing download for "${title}"...`, 'info');
+      const headers = {};
+      if (this.token) {
+        headers['Authorization'] = `Bearer ${this.token}`;
+      }
+
+      const res = await fetch(`/api/v1/documents/${id}/download`, { headers });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to download document. Clearance required.');
+      }
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      const safeFilename = `${title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+      a.download = safeFilename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      this.showToast(`Downloaded: ${safeFilename}`, 'success');
+    } catch (err) {
+      this.showToast(err.message, 'danger');
+    }
+  }
+
+  openUploadDocModal() {
+    const titleInput = document.getElementById('upload-doc-title');
+    const contentInput = document.getElementById('upload-doc-content');
+    if (titleInput) titleInput.value = '';
+    if (contentInput) contentInput.value = '';
+    this.openModal('modal-upload-doc');
+  }
+
+  async submitNewDocument() {
+    const title = document.getElementById('upload-doc-title')?.value.trim();
+    const category = document.getElementById('upload-doc-category')?.value;
+    const accessScope = document.getElementById('upload-doc-scope')?.value;
+    const versionLabel = document.getElementById('upload-doc-version')?.value.trim() || '1.0';
+    const indexInRag = document.getElementById('upload-doc-rag')?.value === 'true';
+    const content = document.getElementById('upload-doc-content')?.value.trim();
+
+    if (!title) {
+      return this.showToast('Please provide a document title.', 'warning');
+    }
+
+    try {
+      await this.api('/documents', {
+        method: 'POST',
+        body: JSON.stringify({
+          title,
+          category,
+          accessScope,
+          versionLabel,
+          indexInRag,
+          content,
+        }),
+      });
+
+      this.showToast(`Document "${title}" published successfully!`, 'success');
+      this.closeModal('modal-upload-doc');
+      this.loadDocuments();
+    } catch {
+      // Error handled in api()
+    }
   }
 
   // --- Modals & Toasts ---

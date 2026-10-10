@@ -23,6 +23,7 @@
       <ul class="nav-links">
         <li><button class="nav-btn active" id="nav-home" onclick="app.showTab('home')">Home</button></li>
         <li><button class="nav-btn" id="nav-activation" onclick="app.showTab('activation')">Account Activation</button></li>
+        <li><button class="nav-btn" id="nav-documents" onclick="app.showTab('documents')">Official Documents</button></li>
         <li><button class="nav-btn" id="nav-student" onclick="app.showTab('student')">Student Portal</button></li>
         <li><button class="nav-btn" id="nav-dean" onclick="app.showTab('dean')">Dean Studio</button></li>
         <li><button class="nav-btn" id="nav-registrar" onclick="app.showTab('registrar')">Registrar Desk</button></li>
@@ -578,6 +579,53 @@
   </div>
 
   <!-- ==============================================================================
+       VIEW 7: OFFICIAL UNIVERSITY DOCUMENT REPOSITORY & DOWNLOADS (Sections 10, 13 & 14)
+       ============================================================================== -->
+  <div id="tab-documents" class="tab-pane">
+    <main class="container">
+      <div style="max-width: 1040px; margin: 0 auto;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Official University Document Repository</h2>
+            <p style="font-size: 0.9rem; color: var(--dbu-text-muted);">
+              Approved legislation, academic calendars, student guides, and institutional policies.
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.5rem;" id="doc-actions-container">
+            <button class="btn btn-primary" id="btn-open-upload-doc" style="display: none;" onclick="app.openUploadDocModal()">+ Publish Document</button>
+            <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.loadDocuments()">🔄 Refresh</button>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+          <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 220px;">
+              <input type="text" id="doc-search-input" class="form-control" placeholder="Search by document title or keyword..." oninput="app.filterDocuments()">
+            </div>
+            <div style="min-width: 200px;">
+              <select id="doc-category-filter" class="form-control" onchange="app.filterDocuments()">
+                <option value="ALL">All Categories</option>
+                <option value="ACADEMIC_CALENDAR">Academic Calendar</option>
+                <option value="SENIOR_POLICY">Senate Legislation & Policy</option>
+                <option value="STUDENT_HANDBOOK">Student Handbook</option>
+                <option value="REGISTRAR_BULLETIN">Registrar Bulletin</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documents Grid -->
+        <div class="grid-2" id="documents-grid-container">
+          <div class="card" style="grid-column: 1 / -1; text-align: center; color: var(--dbu-text-muted);">
+            Loading university publications...
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
        EVIDENCE-GROUNDED AI ASSISTANT DRAWER (Section 10)
        ============================================================================== -->
   <div class="ai-drawer">
@@ -723,6 +771,60 @@
       <div class="modal-footer">
         <button class="btn btn-outline" style="color: var(--dbu-text-muted);" onclick="app.closeModal('modal-reg-decision')">Cancel</button>
         <button class="btn btn-primary" onclick="app.executeRegistrarDecision()">Confirm Institutional Decision</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload / Publish Document Modal -->
+  <div class="modal-overlay" id="modal-upload-doc">
+    <div class="modal" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="card-title">Publish Institutional Document</h3>
+        <button class="btn-close" onclick="app.closeModal('modal-upload-doc')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Document Title</label>
+          <input type="text" id="upload-doc-title" class="form-control" placeholder="e.g. DBU Examination Code of Conduct 2026">
+        </div>
+        <div class="grid-2" style="gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select id="upload-doc-category" class="form-control">
+              <option value="ACADEMIC_CALENDAR">Academic Calendar</option>
+              <option value="SENIOR_POLICY">Senate Legislation & Policy</option>
+              <option value="STUDENT_HANDBOOK">Student Handbook</option>
+              <option value="REGISTRAR_BULLETIN">Registrar Bulletin</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Access Scope</label>
+            <select id="upload-doc-scope" class="form-control">
+              <option value="PUBLIC">PUBLIC (All Visitors)</option>
+              <option value="STUDENT_ONLY">STUDENT_ONLY (Enrolled Students)</option>
+              <option value="STAFF_ONLY">STAFF_ONLY (Faculty & Staff)</option>
+              <option value="REGISTRAR_ONLY">REGISTRAR_ONLY (Registrar Office)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-2" style="gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Version Label</label>
+            <input type="text" id="upload-doc-version" class="form-control" value="1.0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Index in AI Assistant (RAG)?</label>
+            <select id="upload-doc-rag" class="form-control">
+              <option value="true">Yes, vectorize & index</option>
+              <option value="false">No, file download only</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Official Document Body / Content (Text/Markdown)</label>
+          <textarea id="upload-doc-content" class="form-control" rows="5" placeholder="Enter verified university directives, rules, or bulletin text..."></textarea>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="app.submitNewDocument()">Publish Official Document</button>
       </div>
     </div>
   </div>

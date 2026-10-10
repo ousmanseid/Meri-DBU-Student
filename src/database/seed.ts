@@ -325,6 +325,71 @@ export async function runSeed() {
     ]
   );
 
+  // 12. Official University Documents Repository Seed
+  const documentsSeed = [
+    {
+      id: 'doc-acad-cal-2025',
+      title: 'DBU Master Academic Calendar (2025/2026 / 2018 E.C.)',
+      category: 'ACADEMIC_CALENDAR',
+      filePath: 'storage/documents/academic_calendar_2025_2026.pdf',
+      fileSize: 420000,
+      mimeType: 'application/pdf',
+      accessScope: 'PUBLIC',
+      version: '2025.1',
+    },
+    {
+      id: 'doc-senate-leg-2024',
+      title: 'Debre Berhan University Senate Legislation (Revised Edition)',
+      category: 'SENIOR_POLICY',
+      filePath: 'storage/documents/dbu_senate_legislation.pdf',
+      fileSize: 1850000,
+      mimeType: 'application/pdf',
+      accessScope: 'PUBLIC',
+      version: '4.2',
+    },
+    {
+      id: 'doc-handbook-fresh-2025',
+      title: 'Undergraduate Student Orientation & Campus Life Handbook',
+      category: 'STUDENT_HANDBOOK',
+      filePath: 'storage/documents/student_handbook_2025.pdf',
+      fileSize: 950000,
+      mimeType: 'application/pdf',
+      accessScope: 'STUDENT_ONLY',
+      version: '2025.1',
+    },
+    {
+      id: 'doc-grading-guide',
+      title: 'DBU Standard Grading Scale and Academic Standing Directives',
+      category: 'REGISTRAR_BULLETIN',
+      filePath: 'storage/documents/grading_scale_policy.pdf',
+      fileSize: 310000,
+      mimeType: 'application/pdf',
+      accessScope: 'STUDENT_ONLY',
+      version: '3.0',
+    },
+    {
+      id: 'doc-staff-senate-confidential',
+      title: 'DBU Examination Security & Disciplinary Board Protocols',
+      category: 'SENIOR_POLICY',
+      filePath: 'storage/documents/exam_security_confidential.pdf',
+      fileSize: 620000,
+      mimeType: 'application/pdf',
+      accessScope: 'STAFF_ONLY',
+      version: '2025.A',
+    },
+  ];
+
+  for (const doc of documentsSeed) {
+    await db.query(
+      `INSERT INTO documents (
+        id, title, category, file_path, file_size, mime_type, access_scope,
+        uploaded_by_user_id, is_indexed_in_rag, version_label
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'usr-admin', TRUE, $8)
+      ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, access_scope = EXCLUDED.access_scope;`,
+      [doc.id, doc.title, doc.category, doc.filePath, doc.fileSize, doc.mimeType, doc.accessScope, doc.version]
+    );
+  }
+
   console.log('[Seed] Fictional seed data initialized successfully.');
 }
 

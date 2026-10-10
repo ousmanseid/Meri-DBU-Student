@@ -738,5 +738,92 @@ describe('Meri DBU Student: Master Verification Test Suite (Section 18)', () => 
       });
     expect(reuseRes.status).toBe(400);
   });
+
+  // Scenario 28: Public users can access public documents, but are denied student/staff documents
+  it('Scenario 28: Document repository enforces public vs restricted scope for anonymous visitors', async () => {
+    // 1. List documents anonymously
+    const pubListRes = await request(app).get('/api/v1/documents');
+    expect(pubListRes.status).toBe(200);
+    expect(pubListRes.body.documents.length).toBeGreaterThan(0);
+
+    // All returned documents must be PUBLIC
+    for (const doc of pubListRes.body.documents) {
+      expect(doc.access_scope).toBe('PUBLIC');
+    }
+
+    // 2. Public document download succeeds
+    const pubDoc = pubListRes.body.documents[0];
+    const pubDownloadRes = await request(app).get(`/api/v1/documents/${pubDoc.id}/download`);
+    expect(pubDownloadRes.status).toBe(200);
+    expect(pubDownloadRes.headers['content-disposition']).toContain('attachment');
+
+    // 3. Attempting to download confidential staff document without credentials returns 403
+    const staffDownloadRes = await request(app).get('/api/v1/documents/doc-staff-senate-confidential/download');
+    expect(staffDownloadRes.status).toBe(403);
+    expect(staffDownloadRes.body.error).toContain('Access denied');
+  });
+
+  // Scenario 29: Authenticated students can access STUDENT_ONLY documents but not STAFF_ONLY
+  it('Scenario 29: Authenticated students can access STUDENT_ONLY documents but are blocked from STAFF_ONLY', async () => {
+    // 1. Student list documents
+    const studentListRes = await request(app)
+      .get('/api/v1/documents')
+      .set('Authorization', `Bearer ${freshmanToken}`);
+
+    expect(studentListRes.status).toBe(200);
+    const scopes = studentListRes.body.documents.map((d: any) => d.access_scope);
+    expect(scopes).toContain('PUBLIC');
+    expect(scopes).toContain('STUDENT_ONLY');
+    expect(scopes).not.toContain('STAFF_ONLY');
+
+    // 2. Student download of student handbook succeeds
+    const handbookDownloadRes = await request(app)
+      .get('/api/v1/documents/doc-handbook-fresh-2025/download')
+      .set('Authorization', `Bearer ${freshmanToken}`);
+
+    expect(handbookDownloadRes.status).toBe(200);
+
+    // 3. Student download of confidential staff document is denied (403)
+    const staffDocDeniedRes = await request(app)
+      .get('/api/v1/documents/doc-staff-senate-confidential/download')
+      .set('Authorization', `Bearer ${freshmanToken}`);
+
+    expect(staffDocDeniedRes.status).toBe(403);
+  });
+
+  // Scenario 30: Staff can publish, list all scopes, and download STAFF_ONLY documents
+  it('Scenario 30: Authorized staff can publish documents and download STAFF_ONLY files with audit trail', async () => {
+    // 1. Staff downloads confidential staff document
+    const staffDownloadRes = await request(app)
+      .get('/api/v1/documents/doc-staff-senate-confidential/download')
+      .set('Authorization', `Bearer ${registrarToken}`);
+
+    expect(staffDownloadRes.status).toBe(200);
+
+    // 2. Staff publishes a new document
+    const createDocRes = await request(app)
+      .post('/api/v1/documents')
+      .set('Authorization', `Bearer ${registrarToken}`)
+      .send({
+        title: 'DBU 2026 Semester 1 Grading Calendar Directive',
+        category: 'REGISTRAR_BULLETIN',
+        accessScope: 'STUDENT_ONLY',
+        versionLabel: '1.1',
+        content: 'Official registrar instructions on grade entry and deadline schedule.',
+        indexInRag: true,
+      });
+
+    expect(createDocRes.status).toBe(200);
+    expect(createDocRes.body.success).toBe(true);
+    expect(createDocRes.body.document.id).toBeDefined();
+
+    // 3. Student can now see and download the new document
+    const studentCheckRes = await request(app)
+      .get(`/api/v1/documents/${createDocRes.body.document.id}`)
+      .set('Authorization', `Bearer ${freshmanToken}`);
+
+    expect(studentCheckRes.status).toBe(200);
+    expect(studentCheckRes.body.document.title).toBe('DBU 2026 Semester 1 Grading Calendar Directive');
+  });
 });
 

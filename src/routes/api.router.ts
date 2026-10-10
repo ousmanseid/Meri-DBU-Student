@@ -17,6 +17,7 @@ import { RegistrarService } from '../services/registrar.service.js';
 import { WorkflowService } from '../services/workflow.service.js';
 import { StudentService } from '../services/student.service.js';
 import { AnnouncementService } from '../services/announcement.service.js';
+import { DocumentService } from '../services/document.service.js';
 import { RagService } from '../services/rag.service.js';
 import { AuditService } from '../services/audit.service.js';
 
@@ -515,6 +516,85 @@ apiRouter.post(
     }
   }
 );
+
+// ------------------------------------------------------------------------------
+// DOCUMENT REPOSITORY & SECURE DOWNLOADS (Sections 10, 13 & 14)
+// ------------------------------------------------------------------------------
+apiRouter.get('/documents', async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const roles = req.user?.roles || [];
+    const category = req.query.category as string | undefined;
+    const search = req.query.search as string | undefined;
+    const docs = await DocumentService.listDocuments(roles, category, search);
+    res.json({ success: true, documents: docs });
+  } catch (err) {
+    next(err);
+  }
+});
+
+apiRouter.get('/documents/:id', async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const roles = req.user?.roles || [];
+    const doc = await DocumentService.getDocumentById(req.params.id as string, roles);
+    res.json({ success: true, document: doc });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const createDocSchema = z.object({
+  title: z.string().min(2, 'Title required'),
+  category: z.string().min(2, 'Category required'),
+  accessScope: z.enum(['PUBLIC', 'STUDENT_ONLY', 'STAFF_ONLY', 'REGISTRAR_ONLY']),
+  content: z.string().optional(),
+  versionLabel: z.string().default('1.0'),
+  effectiveDate: z.string().optional(),
+  departmentId: z.string().optional(),
+  indexInRag: z.boolean().default(false),
+});
+
+apiRouter.post(
+  '/documents',
+  requireAuth,
+  requireRoles('SYSTEM_ADMIN', 'REGISTRAR', 'AI_KNOWLEDGE_ADMIN', 'DEAN'),
+  async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const data = createDocSchema.parse(req.body);
+      const doc = await DocumentService.createDocument(
+        data,
+        {
+          userId: req.user!.userId,
+          username: req.user!.username,
+          roles: req.user!.roles,
+        },
+        req.ip,
+        req.headers['user-agent'] as string | undefined
+      );
+      res.json({ success: true, document: doc });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+apiRouter.get('/documents/:id/download', async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const roles = req.user?.roles || [];
+    const download = await DocumentService.getDocumentDownload(
+      req.params.id as string,
+      roles,
+      req.user ? { userId: req.user.userId, username: req.user.username } : undefined,
+      req.ip,
+      req.headers['user-agent'] as string | undefined
+    );
+
+    res.setHeader('Content-Type', download.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${download.filename}"`);
+    res.send(download.fileContent);
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ------------------------------------------------------------------------------
 // EVIDENCE-GROUNDED AI ASSISTANT (RAG) (Section 10)
