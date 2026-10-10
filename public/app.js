@@ -60,6 +60,7 @@ class MeriApp {
     // Trigger tab-specific data loading
     if (tabName === 'documents') this.loadDocuments();
     if (tabName === 'admissions' && this.user) this.loadAdmissionsData();
+    if (tabName === 'affairs' && this.user) this.loadAffairsTickets();
     if (tabName === 'student' && this.user) this.loadStudentData();
     if (tabName === 'dean' && this.user) this.loadDeanData();
     if (tabName === 'registrar' && this.user) this.loadRegistrarData();
@@ -77,6 +78,8 @@ class MeriApp {
       this.showTab('registrar');
     } else if (roles.includes('ADMISSIONS')) {
       this.showTab('admissions');
+    } else if (roles.includes('STUDENT_AFFAIRS')) {
+      this.showTab('affairs');
     } else if (roles.includes('AUDITOR')) {
       this.showTab('audit');
     }
@@ -136,6 +139,12 @@ class MeriApp {
         document.getElementById('admissions-unauth-notice').style.display = isAdm ? 'none' : 'block';
         document.getElementById('admissions-dashboard-content').style.display = isAdm ? 'block' : 'none';
       }
+
+      if (document.getElementById('affairs-unauth-notice')) {
+        const isAffairs = this.user && (this.user.roles || []).some((r) => ['STUDENT_AFFAIRS', 'SYSTEM_ADMIN'].includes(r));
+        document.getElementById('affairs-unauth-notice').style.display = isAffairs ? 'none' : 'block';
+        document.getElementById('affairs-dashboard-content').style.display = isAffairs ? 'block' : 'none';
+      }
     } else {
       container.innerHTML = `
         <button class="nav-btn gold" onclick="app.openLoginModal()">Sign In</button>
@@ -188,6 +197,7 @@ class MeriApp {
     if (role === 'DEAN') this.fillLogin('dean.ceng@dbu.edu.et');
     if (role === 'REGISTRAR') this.fillLogin('registrar@dbu.edu.et');
     if (role === 'ADMISSIONS') this.fillLogin('admissions@dbu.edu.et');
+    if (role === 'STUDENT_AFFAIRS') this.fillLogin('affairs@dbu.edu.et');
     if (role === 'AUDITOR') this.fillLogin('auditor@dbu.edu.et');
   }
 
@@ -501,6 +511,7 @@ class MeriApp {
   async loadRegistrarData() {
     this.refreshRegistrarBatches();
     this.searchRegistry();
+    this.loadCorrectionRequests();
   }
 
   async refreshRegistrarBatches() {
@@ -1139,6 +1150,151 @@ class MeriApp {
       toast.style.transition = 'opacity 0.3s ease';
       setTimeout(() => toast.remove(), 300);
     }, 4000);
+  }
+
+  // --- Student Data Correction Review ---
+  async loadCorrectionRequests() {
+    const tbody = document.getElementById('reg-corrections-tbody');
+    if (!tbody) return;
+
+    try {
+      const data = await this.api('/student/corrections');
+      const reqs = data.requests || [];
+
+      if (reqs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--dbu-text-muted); padding: 1.5rem;">No student profile correction requests pending.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = reqs
+        .map((r) => {
+          const isPending = r.status === 'PENDING' || r.status === 'UNDER_REVIEW';
+          const badgeClass =
+            r.status === 'APPROVED' ? 'badge-success' : r.status === 'REJECTED' ? 'badge-danger' : 'badge-warning';
+
+          const actionBtn = isPending
+            ? `<button class="btn btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;" onclick="app.openReviewCorrectionModal('${r.id}', '${this.escapeHtml(r.student_username || r.student_id_number)}', '${this.escapeHtml(r.student_id_number)}', '${r.field_name}', '${this.escapeHtml(r.old_value)}', '${this.escapeHtml(r.requested_value)}', '${this.escapeHtml(r.reason)}')">Review</button>`
+            : `<span style="font-size: 0.75rem; color: var(--dbu-text-muted);">${r.status}</span>`;
+
+          return `
+            <tr>
+              <td style="font-family: monospace;">${this.escapeHtml(r.student_id_number)}</td>
+              <td><strong>${this.escapeHtml(r.student_username || '-')}</strong></td>
+              <td><code>${this.escapeHtml(r.field_name)}</code></td>
+              <td><span style="color: #ef4444;">${this.escapeHtml(r.old_value)}</span></td>
+              <td><span style="color: #10b981; font-weight: 600;">${this.escapeHtml(r.requested_value)}</span></td>
+              <td style="font-size: 0.8rem; max-width: 180px;">${this.escapeHtml(r.reason)}</td>
+              <td><span class="badge ${badgeClass}">${r.status}</span></td>
+              <td>${actionBtn}</td>
+            </tr>
+          `;
+        })
+        .join('');
+    } catch {}
+  }
+
+  openReviewCorrectionModal(id, student, idnum, field, oldVal, newVal, reason) {
+    document.getElementById('review-corr-id').value = id;
+    document.getElementById('review-corr-student').textContent = student;
+    document.getElementById('review-corr-idnum').textContent = idnum;
+    document.getElementById('review-corr-field').textContent = field;
+    document.getElementById('review-corr-old').textContent = oldVal;
+    document.getElementById('review-corr-new').textContent = newVal;
+    document.getElementById('review-corr-reason').textContent = reason;
+    document.getElementById('review-corr-comments').value = '';
+    this.openModal('modal-review-correction');
+  }
+
+  async executeReviewCorrection() {
+    const id = document.getElementById('review-corr-id')?.value;
+    const action = document.getElementById('review-corr-action')?.value;
+    const comments = document.getElementById('review-corr-comments')?.value.trim();
+
+    try {
+      await this.api(`/student/corrections/${id}/review`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action, comments }),
+      });
+
+      this.showToast(`Correction request ${action.toLowerCase()}ed successfully.`, 'success');
+      this.closeModal('modal-review-correction');
+      this.loadCorrectionRequests();
+      this.searchRegistry();
+    } catch {}
+  }
+
+  // --- Student Affairs Directorate ---
+  async loadAffairsTickets() {
+    const tbody = document.getElementById('affairs-tickets-tbody');
+    if (!tbody) return;
+
+    try {
+      const data = await this.api('/staff/requests');
+      const tickets = data.requests || [];
+
+      if (tickets.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--dbu-text-muted); padding: 2rem;">No student service tickets currently in queue.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = tickets
+        .map((t) => {
+          const badgeClass =
+            t.status === 'RESOLVED'
+              ? 'badge-success'
+              : t.status === 'REJECTED'
+              ? 'badge-danger'
+              : t.status === 'IN_PROGRESS'
+              ? 'badge-info'
+              : 'badge-warning';
+
+          const studentName = t.first_name ? `${t.first_name} ${t.last_name || ''}` : t.student_username;
+
+          return `
+            <tr>
+              <td style="font-family: monospace; font-weight: 600;">${this.escapeHtml(t.ticket_number)}</td>
+              <td style="font-family: monospace;">${this.escapeHtml(t.student_id_number || '-')}</td>
+              <td><strong>${this.escapeHtml(studentName)}</strong></td>
+              <td><span class="badge badge-neutral">${this.escapeHtml(t.service_type)}</span></td>
+              <td>${this.escapeHtml(t.subject)}</td>
+              <td><span class="badge ${t.priority === 'URGENT' ? 'badge-danger' : 'badge-neutral'}">${t.priority}</span></td>
+              <td><span class="badge ${badgeClass}">${t.status}</span></td>
+              <td>
+                <button class="btn btn-outline" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;" onclick="app.openResolveTicketModal('${t.id}', '${this.escapeHtml(t.subject)}', '${this.escapeHtml(t.description)}', '${t.status}')">Process</button>
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">Failed to load tickets: ${err.message}</td></tr>`;
+    }
+  }
+
+  openResolveTicketModal(id, title, desc, status) {
+    document.getElementById('ticket-action-id').value = id;
+    document.getElementById('ticket-modal-title').textContent = title;
+    document.getElementById('ticket-modal-desc').textContent = desc;
+    document.getElementById('ticket-new-status').value = status === 'SUBMITTED' ? 'IN_PROGRESS' : status;
+    document.getElementById('ticket-resolution-notes').value = '';
+    this.openModal('modal-resolve-ticket');
+  }
+
+  async executeTicketResolution() {
+    const id = document.getElementById('ticket-action-id')?.value;
+    const status = document.getElementById('ticket-new-status')?.value;
+    const resolutionNotes = document.getElementById('ticket-resolution-notes')?.value.trim();
+
+    try {
+      await this.api(`/staff/requests/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, resolutionNotes }),
+      });
+
+      this.showToast(`Ticket status updated to ${status}. Student notified.`, 'success');
+      this.closeModal('modal-resolve-ticket');
+      this.loadAffairsTickets();
+    } catch {}
   }
 }
 

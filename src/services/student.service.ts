@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../database/db.js';
 import { AuditService } from './audit.service.js';
+import { NotificationService } from './notification.service.js';
 
 export interface CreateServiceRequestParams {
   studentUserId: string;
@@ -108,12 +109,26 @@ export class StudentService {
     resolutionNotes?: string
   ) {
     const db = await getDb();
+    const reqRes = await db.query(`SELECT * FROM student_service_requests WHERE id = $1`, [requestId]);
+    if (reqRes.rows.length === 0) {
+      throw new Error('Service request not found.');
+    }
+    const ticket = reqRes.rows[0];
+
     await db.query(
       `UPDATE student_service_requests
        SET status = $1, assigned_staff_id = $2, resolution_notes = $3, updated_at = CURRENT_TIMESTAMP
        WHERE id = $4`,
       [status, staffUserId, resolutionNotes || null, requestId]
     );
+
+    // Notify student
+    await NotificationService.send({
+      userId: ticket.student_user_id,
+      title: `Service Request ${ticket.ticket_number} Updated`,
+      message: `Your inquiry (${ticket.subject}) has been marked as ${status}.${resolutionNotes ? ' Notes: ' + resolutionNotes : ''}`,
+      type: status === 'RESOLVED' ? 'SUCCESS' : status === 'REJECTED' ? 'WARNING' : 'INFO',
+    });
 
     await AuditService.log({
       actorUserId: staffUserId,
@@ -179,5 +194,93 @@ export class StudentService {
     sql += ' ORDER BY cr.created_at DESC';
     const res = await db.query(sql, params);
     return res.rows;
+  }
+
+  static async reviewCorrectionRequest(
+    requestId: string,
+    reviewerUserId: string,
+    action: 'APPROVE' | 'REJECT',
+    reviewComments?: string
+  ) {
+    const db = await getDb();
+    const reqRes = await db.query(`SELECT * FROM correction_requests WHERE id = $1`, [requestId]);
+
+    if (reqRes.rows.length === 0) {
+      const err = new Error('Correction request not found.');
+      (err as any).status = 404;
+      throw err;
+    }
+
+    const corr = reqRes.rows[0];
+    if (corr.status !== 'PENDING' && corr.status !== 'UNDER_REVIEW') {
+      const err = new Error(`Request has already been decided (${corr.status}).`);
+      (err as any).status = 400;
+      throw err;
+    }
+
+    const newStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+
+    await db.transaction(async (tx) => {
+      await tx.query(
+        `UPDATE correction_requests
+         SET status = $1, reviewed_by_user_id = $2, review_comments = $3, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $4`,
+        [newStatus, reviewerUserId, reviewComments || null, requestId]
+      );
+
+      // If approved, update student profile atomically
+      if (action === 'APPROVE') {
+        const allowedColumns: Record<string, string> = {
+          first_name: 'first_name',
+          last_name: 'last_name',
+          phone: 'phone',
+          gender: 'gender',
+        };
+
+        const targetColumn = allowedColumns[corr.field_name];
+        if (targetColumn) {
+          await tx.query(
+            `UPDATE student_profiles SET ${targetColumn} = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`,
+            [corr.requested_value, corr.student_user_id]
+          );
+        }
+      }
+
+      // Notify student
+      await NotificationService.send(
+        {
+          userId: corr.student_user_id,
+          title: `Data Correction ${newStatus}`,
+          message: `Your request to correct "${corr.field_name}" has been ${newStatus.toLowerCase()} by the Registrar. ${reviewComments ? 'Comments: ' + reviewComments : ''}`,
+          type: action === 'APPROVE' ? 'SUCCESS' : 'WARNING',
+        },
+        tx
+      );
+
+      await AuditService.log(
+        {
+          actorUserId: reviewerUserId,
+          actorRole: 'REGISTRAR',
+          action: action === 'APPROVE' ? 'CORRECTION_REQUEST_APPROVED' : 'CORRECTION_REQUEST_REJECTED',
+          entityType: 'CORRECTION_REQUEST',
+          entityId: requestId,
+          details: {
+            studentUserId: corr.student_user_id,
+            field: corr.field_name,
+            oldValue: corr.old_value,
+            newValue: corr.requested_value,
+            reviewComments,
+          },
+          outcome: 'SUCCESS',
+        },
+        tx
+      );
+    });
+
+    return {
+      success: true,
+      status: newStatus,
+      message: `Correction request ${newStatus.toLowerCase()} successfully.`,
+    };
   }
 }

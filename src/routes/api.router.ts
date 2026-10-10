@@ -454,11 +454,36 @@ apiRouter.get('/student/corrections', requireAuth, async (req: AuthenticatedRequ
   }
 });
 
+const reviewCorrectionSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT']),
+  comments: z.string().optional(),
+});
+
+apiRouter.patch(
+  '/student/corrections/:id/review',
+  requireAuth,
+  requireRoles('REGISTRAR', 'SYSTEM_ADMIN', 'DEAN'),
+  async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const { action, comments } = reviewCorrectionSchema.parse(req.body);
+      const result = await StudentService.reviewCorrectionRequest(
+        req.params.id as string,
+        req.user!.userId,
+        action,
+        comments
+      );
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // Staff handling student service tickets
 apiRouter.get(
   '/staff/requests',
   requireAuth,
-  requireRoles('STUDENT_AFFAIRS', 'SYSTEM_ADMIN', 'DEPT_HEAD'),
+  requireRoles('STUDENT_AFFAIRS', 'SYSTEM_ADMIN', 'REGISTRAR', 'DEPT_HEAD'),
   async (req, res, next) => {
     try {
       const requests = await StudentService.getAllServiceRequests();
@@ -472,11 +497,16 @@ apiRouter.get(
 apiRouter.patch(
   '/staff/requests/:id',
   requireAuth,
-  requireRoles('STUDENT_AFFAIRS', 'SYSTEM_ADMIN'),
+  requireRoles('STUDENT_AFFAIRS', 'SYSTEM_ADMIN', 'REGISTRAR'),
   async (req: AuthenticatedRequest, res, next) => {
     try {
       const { status, resolutionNotes } = req.body;
-      await StudentService.updateServiceRequestStatus(req.params.id as string, req.user!.userId, status, resolutionNotes);
+      await StudentService.updateServiceRequestStatus(
+        req.params.id as string,
+        req.user!.userId,
+        status,
+        resolutionNotes
+      );
       res.json({ success: true, message: 'Request status updated' });
     } catch (err) {
       next(err);

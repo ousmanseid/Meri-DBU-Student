@@ -956,5 +956,83 @@ DBU-ET-2026-9952,UEE-880012,Meseret,Defar,F,col-chs,dept-med`;
     expect(delActiveRes.status).toBe(400);
     expect(delActiveRes.body.error).toContain('Cannot delete an already activated student');
   });
+
+  // Scenario 33: Registrar reviews student data corrections and Student Affairs processes tickets
+  it('Scenario 33: Registrar reviews data corrections with atomic profile updates and Student Affairs processes tickets', async () => {
+    // 1. Fetch pending correction requests as Registrar
+    const listCorrRes = await request(app)
+      .get('/api/v1/student/corrections')
+      .set('Authorization', `Bearer ${registrarToken}`);
+
+    expect(listCorrRes.status).toBe(200);
+    expect(listCorrRes.body.requests.length).toBeGreaterThanOrEqual(1);
+
+    const pendingCorr = listCorrRes.body.requests.find((c: any) => c.status === 'PENDING');
+    expect(pendingCorr).toBeDefined();
+
+    // 2. Unauthorized user (Student) cannot review correction requests
+    const unauthReviewRes = await request(app)
+      .patch(`/api/v1/student/corrections/${pendingCorr.id}/review`)
+      .set('Authorization', `Bearer ${freshmanToken}`)
+      .send({ action: 'APPROVE', comments: 'Self approval attempt' });
+
+    expect(unauthReviewRes.status).toBe(403);
+
+    // 3. Registrar approves correction request
+    const approveRes = await request(app)
+      .patch(`/api/v1/student/corrections/${pendingCorr.id}/review`)
+      .set('Authorization', `Bearer ${registrarToken}`)
+      .send({ action: 'APPROVE', comments: 'Verified against national Kebele ID documentation.' });
+
+    expect(approveRes.status).toBe(200);
+    expect(approveRes.body.success).toBe(true);
+    expect(approveRes.body.status).toBe('APPROVED');
+
+    // 4. Student profile is atomically updated with requested value
+    const updatedProfileRes = await request(app)
+      .get('/api/v1/student/profile')
+      .set('Authorization', `Bearer ${freshmanToken}`);
+
+    expect(updatedProfileRes.status).toBe(200);
+    expect(updatedProfileRes.body.profile.last_name).toBe('Bikila-Abera');
+
+    // 5. Already decided request cannot be decided again
+    const reDecisionRes = await request(app)
+      .patch(`/api/v1/student/corrections/${pendingCorr.id}/review`)
+      .set('Authorization', `Bearer ${registrarToken}`)
+      .send({ action: 'REJECT', comments: 'Attempt to reject approved' });
+
+    expect(reDecisionRes.status).toBe(400);
+
+    // 6. Student Affairs officer logs in and processes student service ticket
+    const affairsLoginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ identifier: 'affairs@dbu.edu.et', password: 'DbuSecure2026!' });
+
+    expect(affairsLoginRes.status).toBe(200);
+    const affairsToken = affairsLoginRes.body.sessionToken;
+
+    // Fetch tickets queue
+    const ticketsRes = await request(app)
+      .get('/api/v1/staff/requests')
+      .set('Authorization', `Bearer ${affairsToken}`);
+
+    expect(ticketsRes.status).toBe(200);
+    expect(ticketsRes.body.requests.length).toBeGreaterThanOrEqual(1);
+
+    const ticket = ticketsRes.body.requests[0];
+
+    // Update ticket status to RESOLVED with notes
+    const resolveTicketRes = await request(app)
+      .patch(`/api/v1/staff/requests/${ticket.id}`)
+      .set('Authorization', `Bearer ${affairsToken}`)
+      .send({
+        status: 'RESOLVED',
+        resolutionNotes: 'Plastic ID card printed and ready for collection at Student Affairs Block 4 Room 102.',
+      });
+
+    expect(resolveTicketRes.status).toBe(200);
+    expect(resolveTicketRes.body.success).toBe(true);
+  });
 });
 

@@ -28,6 +28,7 @@
         <li><button class="nav-btn" id="nav-dean" onclick="app.showTab('dean')">Dean Studio</button></li>
         <li><button class="nav-btn" id="nav-registrar" onclick="app.showTab('registrar')">Registrar Desk</button></li>
         <li><button class="nav-btn" id="nav-admissions" onclick="app.showTab('admissions')">Admissions Desk</button></li>
+        <li><button class="nav-btn" id="nav-affairs" onclick="app.showTab('affairs')">Student Affairs</button></li>
         <li><button class="nav-btn" id="nav-audit" onclick="app.showTab('audit')">Audit Logs</button></li>
         <li id="auth-nav-container">
           <button class="nav-btn gold" onclick="app.openLoginModal()">Sign In</button>
@@ -532,6 +533,38 @@
             </table>
           </div>
         </div>
+
+        <!-- Student Correction Requests Queue -->
+        <div class="card" style="margin-top: 2rem;">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Student Profile Correction Requests</h3>
+              <p style="font-size: 0.85rem; color: var(--dbu-text-muted);">
+                Official student requests to update biographical and profile information subject to Registrar verification.
+              </p>
+            </div>
+            <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.loadCorrectionRequests()">🔄 Refresh Requests</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Student ID</th>
+                  <th>Student Name</th>
+                  <th>Field</th>
+                  <th>Current Value</th>
+                  <th>Requested Value</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="reg-corrections-tbody">
+                <tr><td colspan="8" style="text-align: center; color: var(--dbu-text-muted);">Loading correction requests...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -692,6 +725,60 @@
                 </thead>
                 <tbody id="admissions-records-tbody">
                   <tr><td colspan="8" style="text-align: center; color: var(--dbu-text-muted);">Loading freshman records...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
+       VIEW 9: STUDENT AFFAIRS DIRECTORATE (Section 9)
+       ============================================================================== -->
+  <div id="tab-affairs" class="tab-pane">
+    <main class="container">
+      <div style="max-width: 1100px; margin: 0 auto;">
+        <!-- Unauthorized warning -->
+        <div id="affairs-unauth-notice" class="card" style="text-align: center; padding: 3rem 1.5rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">🏢</div>
+          <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem;">Student Affairs Directorate Clearance Required</h2>
+          <p style="color: var(--dbu-text-muted); max-width: 500px; margin: 0 auto 1.5rem;">
+            This console is restricted to Student Affairs officers and Student Support Administrators. Please sign in with institutional credentials.
+          </p>
+          <button class="btn btn-primary" onclick="app.demoLogin('STUDENT_AFFAIRS')">Sign In as Student Affairs Officer</button>
+        </div>
+
+        <!-- Authorized content -->
+        <div id="affairs-dashboard-content" style="display: none;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Student Service Inquiries & Ticket Desk</h2>
+              <p style="font-size: 0.9rem; color: var(--dbu-text-muted);">
+                Process campus ID card requests, dormitories, clearance letters, and student advising tickets.
+              </p>
+            </div>
+            <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.loadAffairsTickets()">🔄 Refresh Inquiries</button>
+          </div>
+
+          <div class="card">
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Ticket #</th>
+                    <th>Student ID</th>
+                    <th>Student Name</th>
+                    <th>Service Type</th>
+                    <th>Subject</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="affairs-tickets-tbody">
+                  <tr><td colspan="8" style="text-align: center; color: var(--dbu-text-muted);">Loading student inquiries...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -978,6 +1065,78 @@
           <textarea id="adm-import-csv" class="form-control" rows="8" style="font-family: monospace; font-size: 0.82rem;" placeholder="admission_slip_number,entrance_exam_id,first_name,last_name,gender,college_id,department_id&#10;DBU-ET-2026-9050,UEE-995001,Kenenisa,Bekele,M,col-ceng,dept-comp"></textarea>
         </div>
         <button class="btn btn-primary" style="width: 100%;" onclick="app.submitFreshmanCsv()">Execute Bulk Ingest</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review Student Correction Modal -->
+  <div class="modal-overlay" id="modal-review-correction">
+    <div class="modal" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="card-title">Review Data Correction Request</h3>
+        <button class="btn-close" onclick="app.closeModal('modal-review-correction')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="review-corr-id">
+        <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #f8fafc; border-radius: var(--radius-md); font-size: 0.9rem;">
+          <div>👤 <strong id="review-corr-student">Student Name</strong> (<span id="review-corr-idnum">DBU/...</span>)</div>
+          <div style="margin-top: 0.4rem;">
+            Field: <code id="review-corr-field">field_name</code><br>
+            Current Value: <span id="review-corr-old" style="color: #ef4444; font-weight: 600;">-</span><br>
+            Requested Value: <span id="review-corr-new" style="color: #10b981; font-weight: 600;">-</span>
+          </div>
+          <div style="margin-top: 0.4rem; font-size: 0.8rem; color: var(--dbu-text-muted);">
+            Reason: <span id="review-corr-reason">-</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Review Action</label>
+          <select id="review-corr-action" class="form-control">
+            <option value="APPROVE">APPROVE - Update Official Student Profile</option>
+            <option value="REJECT">REJECT - Deny Correction Request</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Registrar Review Comments</label>
+          <textarea id="review-corr-comments" class="form-control" rows="3" placeholder="Enter reason or official documentation note..."></textarea>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%;" onclick="app.executeReviewCorrection()">Submit Decision</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resolve Service Ticket Modal -->
+  <div class="modal-overlay" id="modal-resolve-ticket">
+    <div class="modal" style="max-width: 560px;">
+      <div class="modal-header">
+        <h3 class="card-title">Process Service Request</h3>
+        <button class="btn-close" onclick="app.closeModal('modal-resolve-ticket')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="ticket-action-id">
+        <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #f8fafc; border-radius: var(--radius-md);">
+          <div style="font-weight: 600;" id="ticket-modal-title">Ticket Title</div>
+          <div style="font-size: 0.85rem; color: var(--dbu-text-muted); margin-top: 0.3rem;" id="ticket-modal-desc">Description</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Update Status</label>
+          <select id="ticket-new-status" class="form-control">
+            <option value="IN_PROGRESS">IN_PROGRESS - Ticket Assigned & Under Review</option>
+            <option value="RESOLVED">RESOLVED - Service Provided / Pickup Ready</option>
+            <option value="REJECTED">REJECTED - Ineligible or Incomplete Documentation</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Staff Resolution Notes / Student Instructions</label>
+          <textarea id="ticket-resolution-notes" class="form-control" rows="3" placeholder="e.g. Plastic ID card printed and ready for pickup at Student Affairs counter (Block 4, Room 102)."></textarea>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%;" onclick="app.executeTicketResolution()">Confirm Ticket Update</button>
       </div>
     </div>
   </div>
