@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meri DBU Student | Debre Berhan University</title>
+  <meta name="description" content="Centralized student information and academic support platform for Debre Berhan University (DBU), Ethiopia.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <a href="#" class="brand" onclick="app.showTab('home')">
+      <div class="brand-logo">DBU</div>
+      <div class="brand-text">
+        <h1>ደብረ ብርሃን ዩኒቨርሲቲ</h1>
+        <span>Meri DBU Student Portal</span>
+      </div>
+    </a>
+
+    <nav>
+      <ul class="nav-links">
+        <li><button class="nav-btn active" id="nav-home" onclick="app.showTab('home')">Home</button></li>
+        <li><button class="nav-btn" id="nav-activation" onclick="app.showTab('activation')">Account Activation</button></li>
+        <li><button class="nav-btn" id="nav-student" onclick="app.showTab('student')">Student Portal</button></li>
+        <li><button class="nav-btn" id="nav-dean" onclick="app.showTab('dean')">Dean Studio</button></li>
+        <li><button class="nav-btn" id="nav-registrar" onclick="app.showTab('registrar')">Registrar Desk</button></li>
+        <li><button class="nav-btn" id="nav-audit" onclick="app.showTab('audit')">Audit Logs</button></li>
+        <li id="auth-nav-container">
+          <button class="nav-btn gold" onclick="app.openLoginModal()">Sign In</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- ==============================================================================
+       VIEW 1: PUBLIC HOMEPAGE & UNIVERSITY OVERVIEW
+       ============================================================================== -->
+  <div id="tab-home" class="tab-pane active">
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h2>Empowering Academic Excellence at <span>Debre Berhan University</span></h2>
+          <p>Meri DBU Student connects freshman scholars, senior students, faculty deans, and the registrar office with authorized academic verification, student services, and an evidence-grounded AI knowledge assistant.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" onclick="app.showTab('activation')">Activate Student Account</button>
+            <button class="btn btn-outline" onclick="app.toggleAiChat()">Ask Meri AI Assistant</button>
+            <button class="btn btn-outline" onclick="app.openLoginModal()">Staff Portal Sign In</button>
+          </div>
+        </div>
+
+        <div class="hero-card">
+          <h3>Academic Calendar 2025/2026</h3>
+          <p>Semester 1 regular registration and student onboarding is currently open. Ensure your verified account is activated before the deadline.</p>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: #e2e8f0;">
+            <div>📅 <strong>Freshman Orientation:</strong> Oct 20, 2025</div>
+            <div>🏢 <strong>Dormitory Placement:</strong> Oct 18, 2025</div>
+            <div>📚 <strong>Classes Commence:</strong> Oct 27, 2025</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <main class="container">
+      <div class="card-header" style="margin-top: 1rem;">
+        <h2 class="card-title">Latest University Announcements & Notices</h2>
+        <span class="badge badge-info">Official Bulletins</span>
+      </div>
+
+      <div class="grid-3" id="public-announcements-grid">
+        <div class="card">
+          <span class="badge badge-success" style="margin-bottom: 0.5rem;">Admissions</span>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Welcome to Debre Berhan University</h3>
+          <p style="font-size: 0.9rem; color: var(--dbu-text-muted);">Incoming freshman students are advised to initiate online eligibility verification using their Ministry of Education entrance slip.</p>
+          <div style="font-size: 0.75rem; color: var(--dbu-text-light); margin-top: 1rem;">Posted by DBU Admissions Office</div>
+        </div>
+        <div class="card">
+          <span class="badge badge-warning" style="margin-bottom: 0.5rem;">Registrar</span>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Senior Enrollment Batch Submissions</h3>
+          <p style="font-size: 0.9rem; color: var(--dbu-text-muted);">Authorized college Deans must upload returning senior student rosters for Registrar review before semester activation.</p>
+          <div style="font-size: 0.75rem; color: var(--dbu-text-light); margin-top: 1rem;">Office of the University Registrar</div>
+        </div>
+        <div class="card">
+          <span class="badge badge-info" style="margin-bottom: 0.5rem;">Student Affairs</span>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Digital Student Services Available</h3>
+          <p style="font-size: 0.9rem; color: var(--dbu-text-muted);">ID card replacements, clearance requests, and official inquiries are now submitted directly through the Meri portal.</p>
+          <div style="font-size: 0.75rem; color: var(--dbu-text-light); margin-top: 1rem;">Directorate of Student Services</div>
+        </div>
+      </div>
+
+      <!-- Colleges Directory -->
+      <div class="card-header" style="margin-top: 3rem;">
+        <h2 class="card-title">Faculties & Academic Colleges</h2>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="font-size: 1.15rem; color: var(--dbu-primary); margin-bottom: 0.5rem;">College of Computing & Engineering (CENG)</h3>
+          <p style="font-size: 0.9rem; color: var(--dbu-text-muted); margin-bottom: 0.75rem;">Offering B.Sc. in Software Engineering, Computer Science, and Electrical Engineering with modern computational laboratories.</p>
+          <div class="badge badge-neutral">4 Departments • 6 Programs</div>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 1.15rem; color: var(--dbu-primary); margin-bottom: 0.5rem;">College of Health Sciences (CHS)</h3>
+          <p style="font-size: 0.9rem; color: var(--dbu-text-muted); margin-bottom: 0.75rem;">Doctor of Medicine, Public Health, Nursing, and Pharmacy in partnership with Debre Berhan Referral Hospital.</p>
+          <div class="badge badge-neutral">5 Departments • 7 Programs</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
+       VIEW 2: ACCOUNT ACTIVATION WORKFLOW (Sections 5 & 6)
+       ============================================================================== -->
+  <div id="tab-activation" class="tab-pane">
+    <main class="container">
+      <div style="max-width: 760px; margin: 0 auto;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Student Account Activation Portal</h2>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-primary" id="btn-tab-act-freshman" onclick="app.switchActivationType('freshman')">Freshman Activation</button>
+              <button class="btn btn-outline" id="btn-tab-act-senior" style="color: var(--dbu-primary); border-color: var(--dbu-primary);" onclick="app.switchActivationType('senior')">Senior Student</button>
+            </div>
+          </div>
+
+          <!-- Step 1: Eligibility Verification -->
+          <div id="act-step-1">
+            <div id="act-freshman-form">
+              <p style="font-size: 0.9rem; color: var(--dbu-text-muted); margin-bottom: 1.5rem;">
+                Freshman students: Verify eligibility against the official Debre Berhan University admission roster using your national entrance exam registration slip.
+              </p>
+
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label">Admission Slip Number</label>
+                  <input type="text" id="act-slip" class="form-control" placeholder="e.g. DBU-ET-2026-8801" value="DBU-ET-2026-8801">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Entrance Exam ID</label>
+                  <input type="text" id="act-exam-id" class="form-control" placeholder="e.g. UEE-994411" value="UEE-994411">
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label">First Name (Official Record)</label>
+                  <input type="text" id="act-first-name" class="form-control" placeholder="e.g. Abebe" value="Abebe">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Last / Father Name</label>
+                  <input type="text" id="act-last-name" class="form-control" placeholder="e.g. Bikila" value="Bikila">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Personal Email Address (for verification token)</label>
+                <input type="email" id="act-email" class="form-control" placeholder="student@example.com" value="abebe.bikila@dbu.student.et">
+                <span class="form-help">A single-use expiring activation link will be issued to this email.</span>
+              </div>
+
+              <button class="btn btn-primary" style="width: 100%;" onclick="app.verifyFreshmanEligibility()">Verify Eligibility & Continue</button>
+            </div>
+
+            <!-- Senior Activation Form -->
+            <div id="act-senior-form" style="display: none;">
+              <p style="font-size: 0.9rem; color: var(--dbu-text-muted); margin-bottom: 1.5rem;">
+                Senior students: Verify your eligibility against the Registrar-approved current enrollment registry.
+              </p>
+
+              <div class="form-group">
+                <label class="form-label">DBU Student ID Number</label>
+                <input type="text" id="act-senior-id" class="form-control" placeholder="e.g. DBU/1508801" value="DBU/1508801">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Full Name (As approved by Registrar)</label>
+                <input type="text" id="act-senior-name" class="form-control" placeholder="e.g. Solomon Tadesse Mengistu" value="Solomon Tadesse Mengistu">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Student Email Address</label>
+                <input type="email" id="act-senior-email" class="form-control" placeholder="student@example.com" value="solomon.tadesse@dbu.student.et">
+              </div>
+
+              <button class="btn btn-primary" style="width: 100%;" onclick="app.verifySeniorEligibility()">Verify Senior Enrollment & Continue</button>
+            </div>
+          </div>
+
+          <!-- Step 2: Set Password & Receive Username -->
+          <div id="act-step-2" style="display: none;">
+            <div class="badge badge-success" style="margin-bottom: 1rem;">Eligibility Verified ✓</div>
+            <h3 style="margin-bottom: 0.5rem;">Create Account Password</h3>
+            <p style="font-size: 0.9rem; color: var(--dbu-text-muted); margin-bottom: 1.5rem;">
+              Your eligibility has been confirmed. Please set a secure password. Upon completion, a unique institutional username will be assigned to you.
+            </p>
+
+            <div class="form-group">
+              <label class="form-label">Verification Token</label>
+              <input type="text" id="act-token" class="form-control" readonly style="background: #f1f5f9; font-family: monospace;">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Create Password (Minimum 8 characters)</label>
+              <input type="password" id="act-password" class="form-control" placeholder="Enter secure password" value="StudentPass2026!">
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%;" onclick="app.completeActivation()">Activate Account & Issue Username</button>
+          </div>
+
+          <!-- Step 3: Activation Complete -->
+          <div id="act-step-3" style="display: none; text-align: center; padding: 2rem 1rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+            <h2 style="margin-bottom: 0.5rem; color: var(--dbu-primary);">Account Activated Successfully!</h2>
+            <p style="color: var(--dbu-text-muted); margin-bottom: 1.5rem;">Your official Debre Berhan University student account is now active.</p>
+
+            <div style="background: var(--color-success-bg); border: 2px dashed var(--color-success); border-radius: var(--radius-md); padding: 1.25rem; max-width: 400px; margin: 0 auto 1.5rem;">
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--color-success);">Official Assigned Username</span>
+              <div id="act-assigned-username" style="font-family: monospace; font-size: 1.4rem; font-weight: 800; color: #002d62; margin-top: 0.25rem;">dbu/ug/2026/0000</div>
+            </div>
+
+            <button class="btn btn-primary" onclick="app.loginWithActivatedUser()">Sign In to Student Portal</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
+       VIEW 3: STUDENT PORTAL (Permitted Dashboard)
+       ============================================================================== -->
+  <div id="tab-student" class="tab-pane">
+    <main class="container">
+      <div id="student-unauth-notice" class="card" style="text-align: center; padding: 3rem 1rem;">
+        <h3 style="margin-bottom: 0.5rem;">Student Authentication Required</h3>
+        <p style="color: var(--dbu-text-muted); margin-bottom: 1.5rem;">Please activate your account or sign in with your student credentials to view your personal dashboard.</p>
+        <button class="btn btn-primary" onclick="app.openLoginModal()">Sign In as Student</button>
+      </div>
+
+      <div id="student-dashboard-content" style="display: none;">
+        <!-- Student Profile Card -->
+        <div class="card" style="margin-bottom: 2rem;">
+          <div class="card-header">
+            <div>
+              <h2 id="stu-name" class="card-title">Student Profile</h2>
+              <span id="stu-id-badge" class="badge badge-info" style="margin-top: 0.25rem;">DBU/1508801</span>
+            </div>
+            <span id="stu-status-badge" class="badge badge-success">ACTIVE ENROLLMENT</span>
+          </div>
+
+          <div class="grid-3" style="font-size: 0.9rem;">
+            <div>
+              <span style="color: var(--dbu-text-muted); display: block;">Department:</span>
+              <strong id="stu-dept">Computer Science & Software Engineering</strong>
+            </div>
+            <div>
+              <span style="color: var(--dbu-text-muted); display: block;">College / Faculty:</span>
+              <strong id="stu-college">College of Computing & Engineering</strong>
+            </div>
+            <div>
+              <span style="color: var(--dbu-text-muted); display: block;">Cohort & Academic Level:</span>
+              <strong id="stu-cohort">Year 2 • Semester 1 (2025/2026)</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Submit Service Ticket -->
+          <div class="card">
+            <h3 class="card-title" style="margin-bottom: 1rem;">Submit Student Service Request</h3>
+            <div class="form-group">
+              <label class="form-label">Service Type</label>
+              <select id="req-service-type" class="form-control">
+                <option value="ID_CARD">ID Card Replacement / Pickup</option>
+                <option value="DORMITORY">Dormitory Placement Inquiry</option>
+                <option value="CLEARANCE">Academic Clearance Form</option>
+                <option value="TRANSCRIPT">Official Student Transcript Request</option>
+                <option value="GENERAL">General Academic Inquiry</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input type="text" id="req-subject" class="form-control" placeholder="Brief summary of request">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Detailed Description</label>
+              <textarea id="req-description" class="form-control" placeholder="Provide full details for Student Affairs staff"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="app.submitServiceRequest()">Submit Request</button>
+          </div>
+
+          <!-- Official Data Correction Request -->
+          <div class="card">
+            <h3 class="card-title" style="margin-bottom: 1rem;">Official Data Correction Request</h3>
+            <p style="font-size: 0.85rem; color: var(--dbu-text-muted); margin-bottom: 1rem;">
+              University policy prohibits direct modification of official records. Submit a verified correction request for Registrar review.
+            </p>
+            <div class="form-group">
+              <label class="form-label">Field to Correct</label>
+              <select id="corr-field" class="form-control">
+                <option value="first_name">First Name</option>
+                <option value="last_name">Last / Grandfather Name</option>
+                <option value="phone">Phone Number</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Current Official Value</label>
+              <input type="text" id="corr-old" class="form-control" placeholder="Current value">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Requested Correct Value</label>
+              <input type="text" id="corr-new" class="form-control" placeholder="New correct value">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Justification / Reason</label>
+              <input type="text" id="corr-reason" class="form-control" placeholder="e.g. As shown on national Kebele ID card">
+            </div>
+            <button class="btn btn-primary" onclick="app.submitCorrectionRequest()">Submit Correction Request</button>
+          </div>
+        </div>
+
+        <!-- My Requests Table -->
+        <div class="card" style="margin-top: 2rem;">
+          <h3 class="card-title" style="margin-bottom: 1rem;">My Service Requests & Tickets</h3>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Ticket #</th>
+                  <th>Service Type</th>
+                  <th>Subject</th>
+                  <th>Status</th>
+                  <th>Submitted Date</th>
+                </tr>
+              </thead>
+              <tbody id="student-requests-tbody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--dbu-text-muted);">No service requests submitted yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
+       VIEW 4: DEAN / ACADEMIC OFFICE CONSOLE (Section 6)
+       ============================================================================== -->
+  <div id="tab-dean" class="tab-pane">
+    <main class="container">
+      <div id="dean-unauth-notice" class="card" style="text-align: center; padding: 3rem 1rem;">
+        <h3 style="margin-bottom: 0.5rem;">Dean Authorization Required</h3>
+        <p style="color: var(--dbu-text-muted); margin-bottom: 1.5rem;">Access to senior student enrollment imports is restricted to authorized College Deans and Academic Directors.</p>
+        <button class="btn btn-primary" onclick="app.demoLogin('DEAN')">Sign In as Dean (CENG)</button>
+      </div>
+
+      <div id="dean-dashboard-content" style="display: none;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Senior Student Enrollment Import Studio</h2>
+            <span class="badge badge-info" id="dean-scope-badge">Scoped to: College of Computing & Engineering (CENG)</span>
+          </div>
+          <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.downloadCsvTemplate()">📥 Download Official Template</button>
+        </div>
+
+        <!-- Import Studio Form -->
+        <div class="card" style="margin-bottom: 2rem;">
+          <h3 style="font-size: 1.15rem; margin-bottom: 1rem;">Step 1: Upload & Validate Senior Batch</h3>
+          
+          <div class="grid-3">
+            <div class="form-group">
+              <label class="form-label">College Scope</label>
+              <select id="import-college" class="form-control">
+                <option value="col-ceng">College of Computing & Engineering (CENG)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Academic Year</label>
+              <select id="import-ay" class="form-control">
+                <option value="ay-2025-2026">2025/2026 (2018 E.C.)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Semester</label>
+              <select id="import-sem" class="form-control">
+                <option value="sem-2025-1">Semester 1 (Regular)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <label class="form-label" style="margin-bottom: 0;">CSV Data Stream / Content</label>
+              <button class="btn btn-outline" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; color: var(--dbu-primary);" onclick="app.loadSampleCsv()">Load Valid Sample Data</button>
+            </div>
+            <textarea id="import-csv-text" class="form-control" style="font-family: monospace; font-size: 0.85rem; height: 120px;" placeholder="Paste CSV data or use sample button"></textarea>
+          </div>
+
+          <button class="btn btn-primary" onclick="app.previewImportBatch()">Validate & Preview Batch</button>
+        </div>
+
+        <!-- Preview Results Container -->
+        <div id="import-preview-container" class="card" style="display: none; margin-bottom: 2rem;">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Batch Validation Preview</h3>
+              <span id="preview-batch-num" style="font-size: 0.85rem; color: var(--dbu-text-muted); font-family: monospace;">BAT-DBU-000000</span>
+            </div>
+            <button class="btn btn-primary" id="btn-submit-batch" onclick="app.submitCurrentBatch()">Submit Batch to Registrar</button>
+          </div>
+
+          <!-- Summary Badges -->
+          <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <div class="badge badge-info" id="badge-total-rows">Total: 0</div>
+            <div class="badge badge-success" id="badge-valid-rows">Valid: 0</div>
+            <div class="badge badge-danger" id="badge-invalid-rows">Invalid: 0</div>
+            <div class="badge badge-warning" id="badge-dup-rows">Duplicates: 0</div>
+            <div class="badge badge-danger" id="badge-conflict-rows">Conflicts: 0</div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Row #</th>
+                  <th>Student ID</th>
+                  <th>Full Name</th>
+                  <th>Dept</th>
+                  <th>Cohort</th>
+                  <th>Validation Status</th>
+                  <th>Errors / Discrepancies</th>
+                </tr>
+              </thead>
+              <tbody id="preview-rows-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Dean Batch History -->
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom: 1rem;">College Batch Submission History</h3>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Batch Number</th>
+                  <th>Total Rows</th>
+                  <th>Valid Rows</th>
+                  <th>Status</th>
+                  <th>Reviewer Comments</th>
+                  <th>Submitted At</th>
+                </tr>
+              </thead>
+              <tbody id="dean-batches-tbody">
+                <tr><td colspan="6" style="text-align: center; color: var(--dbu-text-muted);">No batches submitted yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
+       VIEW 5: REGISTRAR INSTITUTIONAL REVIEW DESK (Section 6D, 6E)
+       ============================================================================== -->
+  <div id="tab-registrar" class="tab-pane">
+    <main class="container">
+      <div id="reg-unauth-notice" class="card" style="text-align: center; padding: 3rem 1rem;">
+        <h3 style="margin-bottom: 0.5rem;">University Registrar Authority Required</h3>
+        <p style="color: var(--dbu-text-muted); margin-bottom: 1.5rem;">Batch review and official registry promotion require institutional Registrar credentials.</p>
+        <button class="btn btn-primary" onclick="app.demoLogin('REGISTRAR')">Sign In as University Registrar</button>
+      </div>
+
+      <div id="reg-dashboard-content" style="display: none;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Registrar Institutional Review Console</h2>
+            <span class="badge badge-warning">Separation of Duties Enforced</span>
+          </div>
+          <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.refreshRegistrarBatches()">🔄 Refresh Pending Batches</button>
+        </div>
+
+        <!-- Pending Batches Queue -->
+        <div class="card" style="margin-bottom: 2rem;">
+          <h3 style="font-size: 1.15rem; margin-bottom: 1rem;">Submitted Senior Batches Awaiting Review</h3>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Batch #</th>
+                  <th>College</th>
+                  <th>Submitter</th>
+                  <th>Valid Records</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reg-batches-tbody">
+                <tr><td colspan="6" style="text-align: center; color: var(--dbu-text-muted);">No batches currently under review.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Active Official Registry -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Official Active Senior Enrollment Registry</h3>
+            <input type="text" id="reg-search-input" class="form-control" style="max-width: 280px;" placeholder="Search Student ID or Name..." oninput="app.searchRegistry()">
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Student ID</th>
+                  <th>Full Name</th>
+                  <th>College</th>
+                  <th>Department</th>
+                  <th>Eligibility</th>
+                  <th>Activation Status</th>
+                  <th>Source Batch</th>
+                </tr>
+              </thead>
+              <tbody id="reg-registry-tbody">
+                <tr><td colspan="7" style="text-align: center; color: var(--dbu-text-muted);">Loading registry...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
+       VIEW 6: AUDIT TRAIL & COMPLIANCE LOGS (Section 17)
+       ============================================================================== -->
+  <div id="tab-audit" class="tab-pane">
+    <main class="container">
+      <div id="audit-unauth-notice" class="card" style="text-align: center; padding: 3rem 1rem;">
+        <h3 style="margin-bottom: 0.5rem;">Compliance Auditor Authorization Required</h3>
+        <p style="color: var(--dbu-text-muted); margin-bottom: 1.5rem;">Access to the immutable institutional audit trail requires Auditor or System Administrator privileges.</p>
+        <button class="btn btn-primary" onclick="app.demoLogin('AUDITOR')">Sign In as Compliance Auditor</button>
+      </div>
+
+      <div id="audit-dashboard-content" style="display: none;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Institutional Immutable Audit Trail</h2>
+            <span class="badge badge-success">Append-Only Audit Log</span>
+          </div>
+          <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.loadAuditLogs()">🔄 Refresh Trail</button>
+        </div>
+
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Timestamp (UTC)</th>
+                  <th>Actor Role</th>
+                  <th>Action</th>
+                  <th>Entity Type</th>
+                  <th>Outcome</th>
+                  <th>Audit Details</th>
+                </tr>
+              </thead>
+              <tbody id="audit-logs-tbody">
+                <tr><td colspan="6" style="text-align: center; color: var(--dbu-text-muted);">Loading audit logs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
+       EVIDENCE-GROUNDED AI ASSISTANT DRAWER (Section 10)
+       ============================================================================== -->
+  <div class="ai-drawer">
+    <div class="ai-fab" onclick="app.toggleAiChat()" title="Open Meri AI Assistant">🤖</div>
+
+    <div class="ai-chat-window" id="ai-chat-window">
+      <div class="ai-header">
+        <div class="ai-header-title">
+          <span style="font-size: 1.2rem;">🤖</span>
+          <div>
+            <h4>Meri DBU AI Assistant</h4>
+            <span>Evidence-Grounded (RAG)</span>
+          </div>
+        </div>
+        <button class="btn-close" style="color: #ffffff;" onclick="app.toggleAiChat()">×</button>
+      </div>
+
+      <div class="ai-messages" id="ai-messages">
+        <div class="ai-msg assistant">
+          Hello! I am Meri, your Debre Berhan University AI Academic Assistant. I answer questions strictly grounded in approved DBU institutional documents and cite my sources.
+          <br><br>
+          <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Sample Prompts:</div>
+          <button class="badge badge-info" style="margin-top: 0.35rem; cursor: pointer; text-transform: none;" onclick="app.askAiPrompt('When does freshman orientation begin?')">When does freshman orientation begin?</button>
+          <button class="badge badge-info" style="margin-top: 0.35rem; cursor: pointer; text-transform: none;" onclick="app.askAiPrompt('የአዲስ ገቢ ተማሪዎች ምዝገባ መቼ ነው?')">የአዲስ ገቢ ተማሪዎች ምዝገባ መቼ ነው? (Amharic)</button>
+          <button class="badge badge-warning" style="margin-top: 0.35rem; cursor: pointer; text-transform: none;" onclick="app.askAiPrompt('What is the aerospace engineering tuition fee?')">Ask unconfirmed fee (Abstention Test)</button>
+        </div>
+      </div>
+
+      <div class="ai-input-area">
+        <input type="text" id="ai-user-input" class="form-control" placeholder="Ask question in English or Amharic..." onkeydown="if(event.key==='Enter') app.sendAiQuery()">
+        <button class="btn btn-primary" onclick="app.sendAiQuery()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================================
+       MODALS: AUTHENTICATION & REGISTRAR DECISION
+       ============================================================================== -->
+
+  <!-- Sign In Modal -->
+  <div class="modal-overlay" id="modal-login">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="card-title">Sign In to Meri DBU</h3>
+        <button class="btn-close" onclick="app.closeModal('modal-login')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Username or Institutional Email</label>
+          <input type="text" id="login-identifier" class="form-control" placeholder="username or email" value="admin@dbu.edu.et">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="login-password" class="form-control" placeholder="Password" value="DbuSecure2026!">
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="app.executeLogin()">Sign In</button>
+
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--dbu-border);">
+          <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--dbu-text-muted);">Quick Role Select for Evaluation:</span>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+            <button class="badge badge-info" style="cursor: pointer;" onclick="app.fillLogin('admin@dbu.edu.et')">Admin</button>
+            <button class="badge badge-warning" style="cursor: pointer;" onclick="app.fillLogin('registrar@dbu.edu.et')">Registrar</button>
+            <button class="badge badge-primary" style="cursor: pointer;" onclick="app.fillLogin('dean.ceng@dbu.edu.et')">Dean (CENG)</button>
+            <button class="badge badge-success" style="cursor: pointer;" onclick="app.fillLogin('auditor@dbu.edu.et')">Auditor</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registrar Batch Review Modal -->
+  <div class="modal-overlay" id="modal-reg-decision">
+    <div class="modal" style="max-width: 680px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="card-title">Registrar Institutional Review</h3>
+          <span id="decision-batch-num" style="font-family: monospace; font-size: 0.85rem; color: var(--dbu-text-muted);">BAT-DBU-000000</span>
+        </div>
+        <button class="btn-close" onclick="app.closeModal('modal-reg-decision')">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: var(--dbu-text-muted); margin-bottom: 1.25rem;">
+          Select your institutional decision. Approving this batch will promote valid student records into the official senior eligibility registry. Rejection or return requires a mandatory justification.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Review Decision</label>
+          <select id="reg-decision-action" class="form-control" onchange="app.toggleCommentRequirement()">
+            <option value="APPROVE">APPROVE - Promote Records into Active Registry</option>
+            <option value="RETURN_FOR_CORRECTION">RETURN FOR CORRECTION - Require Dean Corrections</option>
+            <option value="REJECT">REJECT - Deny Batch with Official Justification</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Review Comments / Justification</label>
+          <textarea id="reg-decision-comments" class="form-control" placeholder="Enter detailed institutional review justification..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" style="color: var(--dbu-text-muted);" onclick="app.closeModal('modal-reg-decision')">Cancel</button>
+        <button class="btn btn-primary" onclick="app.executeRegistrarDecision()">Confirm Institutional Decision</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-content">
+      <div>
+        <h3 style="color: #ffffff; font-size: 1.2rem; margin-bottom: 0.75rem;">Debre Berhan University (DBU)</h3>
+        <p style="font-size: 0.9rem; max-width: 450px;">
+          Debre Berhan University is one of Ethiopia's leading higher education institutions, committed to delivering quality education, cutting-edge research, and student-centered academic platforms.
+        </p>
+      </div>
+      <div>
+        <h4 style="color: var(--dbu-gold); font-size: 0.95rem; margin-bottom: 0.75rem;">Quick Navigation</h4>
+        <ul style="list-style: none; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.4rem;">
+          <li><a href="#" style="color: #cbd5e1; text-decoration: none;" onclick="app.showTab('home')">Public Home</a></li>
+          <li><a href="#" style="color: #cbd5e1; text-decoration: none;" onclick="app.showTab('activation')">Account Activation</a></li>
+          <li><a href="#" style="color: #cbd5e1; text-decoration: none;" onclick="app.showTab('student')">Student Portal</a></li>
+          <li><a href="#" style="color: #cbd5e1; text-decoration: none;" onclick="app.toggleAiChat()">Ask AI Assistant</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 style="color: var(--dbu-gold); font-size: 0.95rem; margin-bottom: 0.75rem;">Institution Contact</h4>
+        <p style="font-size: 0.85rem; line-height: 1.6;">
+          Debre Berhan, Amhara, Ethiopia<br>
+          P.O. Box 445<br>
+          Email: info@dbu.edu.et<br>
+          Phone: +251 11 681 5440
+        </p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>© 2026 Debre Berhan University. Meri DBU Student Platform. All rights reserved.</div>
+      <div>Ethiopia Academic Year 2018 E.C. (2025/2026 G.C.)</div>
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
