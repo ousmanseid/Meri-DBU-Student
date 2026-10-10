@@ -865,5 +865,96 @@ describe('Meri DBU Student: Master Verification Test Suite (Section 18)', () => 
     expect(checkRes.status).toBe(200);
     expect(checkRes.body.unreadCount).toBe(0);
   });
+
+  // Scenario 32: Admissions Directorate manages freshman eligibility records with RBAC and validation
+  it('Scenario 32: Admissions Directorate manages freshman eligibility records with strict RBAC', async () => {
+    // 1. Unauthorized user (Student or Dean) cannot manage admissions records
+    const unauthRes = await request(app)
+      .post('/api/v1/admissions/records')
+      .set('Authorization', `Bearer ${freshmanToken}`)
+      .send({
+        admissionSlipNumber: 'DBU-ET-2026-9901',
+        entranceExamId: 'UEE-887766',
+        firstName: 'Test',
+        lastName: 'Candidate',
+        gender: 'M',
+        collegeId: 'col-ceng',
+        departmentId: 'dept-comp',
+      });
+
+    expect(unauthRes.status).toBe(403);
+
+    // 2. Admissions staff authenticates
+    const admLoginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ identifier: 'admissions@dbu.edu.et', password: 'DbuSecure2026!' });
+
+    expect(admLoginRes.status).toBe(200);
+    const admissionsToken = admLoginRes.body.sessionToken;
+
+    // 3. Admissions staff registers a new candidate
+    const createRes = await request(app)
+      .post('/api/v1/admissions/records')
+      .set('Authorization', `Bearer ${admissionsToken}`)
+      .send({
+        admissionSlipNumber: 'DBU-ET-2026-9901',
+        entranceExamId: 'UEE-887766',
+        firstName: 'Dawit',
+        lastName: 'Hailu',
+        gender: 'M',
+        collegeId: 'col-ceng',
+        departmentId: 'dept-comp',
+      });
+
+    expect(createRes.status).toBe(200);
+    expect(createRes.body.success).toBe(true);
+    expect(createRes.body.record.id).toBeDefined();
+
+    // 4. Duplicate registration attempt is rejected with 409 Conflict
+    const dupRes = await request(app)
+      .post('/api/v1/admissions/records')
+      .set('Authorization', `Bearer ${admissionsToken}`)
+      .send({
+        admissionSlipNumber: 'DBU-ET-2026-9901',
+        entranceExamId: 'UEE-887766',
+        firstName: 'Duplicate',
+        lastName: 'Attempt',
+        gender: 'M',
+        collegeId: 'col-ceng',
+        departmentId: 'dept-comp',
+      });
+
+    expect(dupRes.status).toBe(409);
+
+    // 5. Bulk CSV ingest by Admissions staff
+    const csvRoster = `admission_slip_number,entrance_exam_id,first_name,last_name,gender,college_id,department_id
+DBU-ET-2026-9951,UEE-880011,Kenenisa,Bekele,M,col-ceng,dept-comp
+DBU-ET-2026-9952,UEE-880012,Meseret,Defar,F,col-chs,dept-med`;
+
+    const bulkRes = await request(app)
+      .post('/api/v1/admissions/import')
+      .set('Authorization', `Bearer ${admissionsToken}`)
+      .send({ csvContent: csvRoster });
+
+    expect(bulkRes.status).toBe(200);
+    expect(bulkRes.body.summary.importedCount).toBe(2);
+
+    // 6. Unactivated candidate can be revoked
+    const deleteRes = await request(app)
+      .delete(`/api/v1/admissions/records/${createRes.body.record.id}`)
+      .set('Authorization', `Bearer ${admissionsToken}`);
+
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.success).toBe(true);
+
+    // 7. Activated freshman record cannot be revoked
+    // (Scenario 3 activated fresh-001)
+    const delActiveRes = await request(app)
+      .delete('/api/v1/admissions/records/fresh-001')
+      .set('Authorization', `Bearer ${admissionsToken}`);
+
+    expect(delActiveRes.status).toBe(400);
+    expect(delActiveRes.body.error).toContain('Cannot delete an already activated student');
+  });
 });
 

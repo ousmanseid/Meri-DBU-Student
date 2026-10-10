@@ -27,6 +27,7 @@
         <li><button class="nav-btn" id="nav-student" onclick="app.showTab('student')">Student Portal</button></li>
         <li><button class="nav-btn" id="nav-dean" onclick="app.showTab('dean')">Dean Studio</button></li>
         <li><button class="nav-btn" id="nav-registrar" onclick="app.showTab('registrar')">Registrar Desk</button></li>
+        <li><button class="nav-btn" id="nav-admissions" onclick="app.showTab('admissions')">Admissions Desk</button></li>
         <li><button class="nav-btn" id="nav-audit" onclick="app.showTab('audit')">Audit Logs</button></li>
         <li id="auth-nav-container">
           <button class="nav-btn gold" onclick="app.openLoginModal()">Sign In</button>
@@ -626,6 +627,81 @@
   </div>
 
   <!-- ==============================================================================
+       VIEW 8: ADMISSIONS DIRECTORATE & FRESHMAN ELIGIBILITY (Section 7)
+       ============================================================================== -->
+  <div id="tab-admissions" class="tab-pane">
+    <main class="container">
+      <div style="max-width: 1100px; margin: 0 auto;">
+        <!-- Unauthorized warning -->
+        <div id="admissions-unauth-notice" class="card" style="text-align: center; padding: 3rem 1.5rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">🔒</div>
+          <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem;">Admissions Directorate Clearance Required</h2>
+          <p style="color: var(--dbu-text-muted); max-width: 500px; margin: 0 auto 1.5rem;">
+            This workstation is restricted to authorized DBU Admissions staff and System Administrators. Please sign in with institutional admissions credentials.
+          </p>
+          <button class="btn btn-primary" onclick="app.demoLogin('ADMISSIONS')">Sign In as Admissions Officer</button>
+        </div>
+
+        <!-- Authorized content -->
+        <div id="admissions-dashboard-content" style="display: none;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Freshman Admission Eligibility Registry</h2>
+              <p style="font-size: 0.9rem; color: var(--dbu-text-muted);">
+                Official Ministry of Education freshman placements and candidate records for academic year 2025/2026.
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-primary" onclick="app.openRegisterFreshmanModal()">+ Register Candidate</button>
+              <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.openImportFreshmanModal()">📥 CSV Ingest</button>
+              <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.loadAdmissionsData()">🔄 Refresh</button>
+            </div>
+          </div>
+
+          <!-- Filter bar -->
+          <div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 240px;">
+                <input type="text" id="adm-search-input" class="form-control" placeholder="Search slip, exam ID, or candidate name..." oninput="app.loadAdmissionsData()">
+              </div>
+              <div style="min-width: 180px;">
+                <select id="adm-status-filter" class="form-control" onchange="app.loadAdmissionsData()">
+                  <option value="ALL">All Activation States</option>
+                  <option value="UNACTIVATED">Unactivated / Pending</option>
+                  <option value="ACTIVATED">Activated Accounts</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="card">
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Admission Slip</th>
+                    <th>Exam ID</th>
+                    <th>Full Name</th>
+                    <th>Gender</th>
+                    <th>Assigned College</th>
+                    <th>Department</th>
+                    <th>Activation Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="admissions-records-tbody">
+                  <tr><td colspan="8" style="text-align: center; color: var(--dbu-text-muted);">Loading freshman records...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
        EVIDENCE-GROUNDED AI ASSISTANT DRAWER (Section 10)
        ============================================================================== -->
   <div class="ai-drawer">
@@ -825,6 +901,83 @@
           <textarea id="upload-doc-content" class="form-control" rows="5" placeholder="Enter verified university directives, rules, or bulletin text..."></textarea>
         </div>
         <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="app.submitNewDocument()">Publish Official Document</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Freshman Candidate Modal -->
+  <div class="modal-overlay" id="modal-register-freshman">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="card-title">Register Freshman Candidate</h3>
+        <button class="btn-close" onclick="app.closeModal('modal-register-freshman')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="grid-2" style="gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Admission Slip Number</label>
+            <input type="text" id="adm-reg-slip" class="form-control" placeholder="e.g. DBU-ET-2026-9011">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Entrance Exam ID</label>
+            <input type="text" id="adm-reg-exam" class="form-control" placeholder="e.g. UEE-998811">
+          </div>
+        </div>
+        <div class="grid-2" style="gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input type="text" id="adm-reg-first" class="form-control" placeholder="e.g. Bekele">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name / Grandfather</label>
+            <input type="text" id="adm-reg-last" class="form-control" placeholder="e.g. Molla">
+          </div>
+        </div>
+        <div class="grid-3" style="gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select id="adm-reg-gender" class="form-control">
+              <option value="M">Male (M)</option>
+              <option value="F">Female (F)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assigned College</label>
+            <select id="adm-reg-college" class="form-control">
+              <option value="col-ceng">Computing & Engineering</option>
+              <option value="col-chs">Health Sciences</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select id="adm-reg-dept" class="form-control">
+              <option value="dept-comp">Computer Science</option>
+              <option value="dept-eeng">Electrical Engineering</option>
+              <option value="dept-med">Medicine</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="app.submitNewFreshman()">Confirm Registration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Import Freshman CSV Modal -->
+  <div class="modal-overlay" id="modal-import-freshman">
+    <div class="modal" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3 class="card-title">Bulk Import Freshman Candidates</h3>
+        <button class="btn-close" onclick="app.closeModal('modal-import-freshman')">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--dbu-text-muted); margin-bottom: 0.75rem;">
+          Paste CSV roster records matching the required header columns:
+          <code>admission_slip_number,entrance_exam_id,first_name,last_name,gender,college_id,department_id</code>
+        </p>
+        <div class="form-group">
+          <textarea id="adm-import-csv" class="form-control" rows="8" style="font-family: monospace; font-size: 0.82rem;" placeholder="admission_slip_number,entrance_exam_id,first_name,last_name,gender,college_id,department_id&#10;DBU-ET-2026-9050,UEE-995001,Kenenisa,Bekele,M,col-ceng,dept-comp"></textarea>
+        </div>
+        <button class="btn btn-primary" style="width: 100%;" onclick="app.submitFreshmanCsv()">Execute Bulk Ingest</button>
       </div>
     </div>
   </div>

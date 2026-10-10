@@ -19,6 +19,7 @@ import { StudentService } from '../services/student.service.js';
 import { AnnouncementService } from '../services/announcement.service.js';
 import { DocumentService } from '../services/document.service.js';
 import { NotificationService } from '../services/notification.service.js';
+import { AdmissionsService } from '../services/admissions.service.js';
 import { RagService } from '../services/rag.service.js';
 import { AuditService } from '../services/audit.service.js';
 
@@ -630,6 +631,98 @@ apiRouter.post('/notifications/mark-all-read', requireAuth, async (req: Authenti
     next(err);
   }
 });
+
+// ------------------------------------------------------------------------------
+// ADMISSIONS OFFICE (Section 7)
+// ------------------------------------------------------------------------------
+apiRouter.get(
+  '/admissions/records',
+  requireAuth,
+  requireRoles('ADMISSIONS', 'SYSTEM_ADMIN', 'REGISTRAR'),
+  async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const records = await AdmissionsService.listFreshmanRecords({
+        search: req.query.search as string | undefined,
+        collegeId: req.query.collegeId as string | undefined,
+        isActivated: req.query.isActivated !== undefined ? req.query.isActivated === 'true' : undefined,
+        limit: req.query.limit ? Number(req.query.limit) : 100,
+      });
+      res.json({ success: true, records });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+const createFreshmanSchema = z.object({
+  admissionSlipNumber: z.string().min(3),
+  entranceExamId: z.string().min(3),
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
+  gender: z.enum(['M', 'F', 'O']),
+  collegeId: z.string().min(2),
+  departmentId: z.string().min(2),
+  academicYearId: z.string().optional(),
+});
+
+apiRouter.post(
+  '/admissions/records',
+  requireAuth,
+  requireRoles('ADMISSIONS', 'SYSTEM_ADMIN'),
+  async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const data = createFreshmanSchema.parse(req.body);
+      const record = await AdmissionsService.createFreshmanRecord(
+        data,
+        { userId: req.user!.userId, username: req.user!.username },
+        req.ip,
+        req.headers['user-agent'] as string | undefined
+      );
+      res.json({ success: true, record });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+apiRouter.post(
+  '/admissions/import',
+  requireAuth,
+  requireRoles('ADMISSIONS', 'SYSTEM_ADMIN'),
+  async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const { csvContent } = z.object({ csvContent: z.string().min(10) }).parse(req.body);
+      const summary = await AdmissionsService.importFreshmanCsv(
+        csvContent,
+        { userId: req.user!.userId, username: req.user!.username },
+        req.ip,
+        req.headers['user-agent'] as string | undefined
+      );
+      res.json({ success: true, summary });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+apiRouter.delete(
+  '/admissions/records/:id',
+  requireAuth,
+  requireRoles('ADMISSIONS', 'SYSTEM_ADMIN'),
+  async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const result = await AdmissionsService.deleteFreshmanRecord(
+        req.params.id as string,
+        { userId: req.user!.userId, username: req.user!.username },
+        req.ip,
+        req.headers['user-agent'] as string | undefined
+      );
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // ------------------------------------------------------------------------------
 // EVIDENCE-GROUNDED AI ASSISTANT (RAG) (Section 10)

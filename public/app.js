@@ -59,6 +59,7 @@ class MeriApp {
 
     // Trigger tab-specific data loading
     if (tabName === 'documents') this.loadDocuments();
+    if (tabName === 'admissions' && this.user) this.loadAdmissionsData();
     if (tabName === 'student' && this.user) this.loadStudentData();
     if (tabName === 'dean' && this.user) this.loadDeanData();
     if (tabName === 'registrar' && this.user) this.loadRegistrarData();
@@ -74,6 +75,8 @@ class MeriApp {
       this.showTab('dean');
     } else if (roles.includes('REGISTRAR')) {
       this.showTab('registrar');
+    } else if (roles.includes('ADMISSIONS')) {
+      this.showTab('admissions');
     } else if (roles.includes('AUDITOR')) {
       this.showTab('audit');
     }
@@ -127,6 +130,12 @@ class MeriApp {
 
       if (document.getElementById('audit-unauth-notice')) document.getElementById('audit-unauth-notice').style.display = 'none';
       if (document.getElementById('audit-dashboard-content')) document.getElementById('audit-dashboard-content').style.display = 'block';
+
+      if (document.getElementById('admissions-unauth-notice')) {
+        const isAdm = this.user && (this.user.roles || []).some((r) => ['ADMISSIONS', 'SYSTEM_ADMIN'].includes(r));
+        document.getElementById('admissions-unauth-notice').style.display = isAdm ? 'none' : 'block';
+        document.getElementById('admissions-dashboard-content').style.display = isAdm ? 'block' : 'none';
+      }
     } else {
       container.innerHTML = `
         <button class="nav-btn gold" onclick="app.openLoginModal()">Sign In</button>
@@ -178,6 +187,7 @@ class MeriApp {
     this.openLoginModal();
     if (role === 'DEAN') this.fillLogin('dean.ceng@dbu.edu.et');
     if (role === 'REGISTRAR') this.fillLogin('registrar@dbu.edu.et');
+    if (role === 'ADMISSIONS') this.fillLogin('admissions@dbu.edu.et');
     if (role === 'AUDITOR') this.fillLogin('auditor@dbu.edu.et');
   }
 
@@ -907,6 +917,139 @@ class MeriApp {
       await this.api('/notifications/mark-all-read', { method: 'POST' });
       this.showToast('All notifications marked as read.', 'info');
       await this.pollNotifications();
+    } catch {}
+  }
+
+  // --- Admissions Directorate ---
+  async loadAdmissionsData() {
+    const tbody = document.getElementById('admissions-records-tbody');
+    if (!tbody) return;
+
+    const q = document.getElementById('adm-search-input')?.value || '';
+    const statusFilter = document.getElementById('adm-status-filter')?.value || 'ALL';
+
+    const params = new URLSearchParams();
+    if (q.trim()) params.set('search', q.trim());
+    if (statusFilter === 'ACTIVATED') params.set('isActivated', 'true');
+    if (statusFilter === 'UNACTIVATED') params.set('isActivated', 'false');
+
+    try {
+      const data = await this.api(`/admissions/records?${params.toString()}`);
+      const records = data.records || [];
+
+      if (records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--dbu-text-muted); padding: 2rem;">No freshman eligibility records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = records
+        .map((r) => {
+          const isAct = r.is_activated;
+          const statusBadge = isAct
+            ? '<span class="badge badge-success">Activated ✓</span>'
+            : '<span class="badge badge-warning">Pending Activation</span>';
+
+          const actionBtn = isAct
+            ? '<span style="font-size: 0.75rem; color: var(--dbu-text-muted);">Account Active</span>'
+            : `<button class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; color: #ef4444; border-color: #ef4444;" onclick="app.deleteFreshmanRecord('${r.id}')">Revoke</button>`;
+
+          return `
+            <tr>
+              <td style="font-family: monospace; font-weight: 600;">${this.escapeHtml(r.admission_slip_number)}</td>
+              <td style="font-family: monospace;">${this.escapeHtml(r.entrance_exam_id)}</td>
+              <td><strong>${this.escapeHtml(r.first_name)} ${this.escapeHtml(r.last_name)}</strong></td>
+              <td>${r.gender || '-'}</td>
+              <td>${this.escapeHtml(r.college_name || r.college_id)}</td>
+              <td>${this.escapeHtml(r.department_name || r.department_id)}</td>
+              <td>${statusBadge}</td>
+              <td>${actionBtn}</td>
+            </tr>
+          `;
+        })
+        .join('');
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">Failed to load admissions data: ${err.message}</td></tr>`;
+    }
+  }
+
+  openRegisterFreshmanModal() {
+    const s = document.getElementById('adm-reg-slip');
+    const e = document.getElementById('adm-reg-exam');
+    const f = document.getElementById('adm-reg-first');
+    const l = document.getElementById('adm-reg-last');
+    if (s) s.value = '';
+    if (e) e.value = '';
+    if (f) f.value = '';
+    if (l) l.value = '';
+    this.openModal('modal-register-freshman');
+  }
+
+  async submitNewFreshman() {
+    const admissionSlipNumber = document.getElementById('adm-reg-slip')?.value.trim();
+    const entranceExamId = document.getElementById('adm-reg-exam')?.value.trim();
+    const firstName = document.getElementById('adm-reg-first')?.value.trim();
+    const lastName = document.getElementById('adm-reg-last')?.value.trim();
+    const gender = document.getElementById('adm-reg-gender')?.value;
+    const collegeId = document.getElementById('adm-reg-college')?.value;
+    const departmentId = document.getElementById('adm-reg-dept')?.value;
+
+    if (!admissionSlipNumber || !entranceExamId || !firstName || !lastName) {
+      return this.showToast('Please fill in all mandatory candidate fields.', 'warning');
+    }
+
+    try {
+      await this.api('/admissions/records', {
+        method: 'POST',
+        body: JSON.stringify({
+          admissionSlipNumber,
+          entranceExamId,
+          firstName,
+          lastName,
+          gender,
+          collegeId,
+          departmentId,
+        }),
+      });
+
+      this.showToast(`Candidate ${firstName} ${lastName} registered successfully!`, 'success');
+      this.closeModal('modal-register-freshman');
+      this.loadAdmissionsData();
+    } catch {}
+  }
+
+  openImportFreshmanModal() {
+    const c = document.getElementById('adm-import-csv');
+    if (c) c.value = '';
+    this.openModal('modal-import-freshman');
+  }
+
+  async submitFreshmanCsv() {
+    const csvContent = document.getElementById('adm-import-csv')?.value.trim();
+    if (!csvContent) {
+      return this.showToast('Please paste valid CSV content.', 'warning');
+    }
+
+    try {
+      const res = await this.api('/admissions/import', {
+        method: 'POST',
+        body: JSON.stringify({ csvContent }),
+      });
+
+      this.showToast(
+        `Bulk ingest complete: ${res.summary.importedCount} imported, ${res.summary.skippedCount} skipped.`,
+        'success'
+      );
+      this.closeModal('modal-import-freshman');
+      this.loadAdmissionsData();
+    } catch {}
+  }
+
+  async deleteFreshmanRecord(id) {
+    if (!confirm('Are you sure you want to revoke this freshman candidate eligibility?')) return;
+    try {
+      await this.api(`/admissions/records/${id}`, { method: 'DELETE' });
+      this.showToast('Freshman candidate eligibility revoked.', 'info');
+      this.loadAdmissionsData();
     } catch {}
   }
 
