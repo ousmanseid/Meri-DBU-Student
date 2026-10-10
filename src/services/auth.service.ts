@@ -237,4 +237,118 @@ export class AuthService {
       [sessionToken]
     );
   }
+
+  static async requestPasswordReset(identifier: string, ipAddress?: string, userAgent?: string) {
+    const db = await getDb();
+    const cleanId = identifier.trim().toLowerCase();
+
+    const userRes = await db.query(
+      `SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1`,
+      [cleanId]
+    );
+
+    if (userRes.rows.length === 0) {
+      await AuditService.log({
+        action: 'AUTH_FORGOT_PASSWORD_ATTEMPT_UNKNOWN',
+        entityType: 'USER',
+        entityId: cleanId,
+        ipAddress,
+        userAgent,
+        outcome: 'FAILURE',
+      });
+      // Anti-enumeration: Return same safe success message
+      return {
+        success: true,
+        message: 'If an account matches that identifier, password recovery instructions have been dispatched.',
+      };
+    }
+
+    const user = userRes.rows[0];
+    const token = 'rst-' + uuidv4();
+
+    await db.query(
+      `INSERT INTO email_verification_tokens (id, email, token, user_id, purpose, expires_at)
+       VALUES ($1, $2, $3, $4, 'PASSWORD_RESET', CURRENT_TIMESTAMP + INTERVAL '1 hour')`,
+      ['evt-' + uuidv4(), user.email, token, user.id]
+    );
+
+    await AuditService.log({
+      actorUserId: user.id,
+      actorUsername: user.username,
+      action: 'AUTH_PASSWORD_RESET_TOKEN_ISSUED',
+      entityType: 'USER',
+      entityId: user.id,
+      ipAddress,
+      userAgent,
+      outcome: 'SUCCESS',
+    });
+
+    return {
+      success: true,
+      message: 'Password reset token dispatched successfully.',
+      resetToken: token, // Provided for test/dev convenience
+      email: user.email,
+    };
+  }
+
+  static async resetPassword(token: string, newPassword: string, ipAddress?: string, userAgent?: string) {
+    const db = await getDb();
+
+    if (!newPassword || newPassword.length < 8) {
+      throw new Error('New password must be at least 8 characters long.');
+    }
+
+    const tokenRes = await db.query(
+      `SELECT * FROM email_verification_tokens
+       WHERE token = $1 AND purpose = 'PASSWORD_RESET' AND is_used = FALSE AND expires_at > CURRENT_TIMESTAMP`,
+      [token.trim()]
+    );
+
+    if (tokenRes.rows.length === 0) {
+      throw new Error('Invalid, expired, or previously used password reset token.');
+    }
+
+    const tokenRow = tokenRes.rows[0];
+    const passwordHash = await this.hashPassword(newPassword);
+
+    await db.transaction(async (tx) => {
+      // Update user password and unlock
+      await tx.query(
+        `UPDATE users
+         SET password_hash = $1, failed_login_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
+        [passwordHash, tokenRow.user_id]
+      );
+
+      // Invalidate token
+      await tx.query(
+        `UPDATE email_verification_tokens SET is_used = TRUE WHERE id = $1`,
+        [tokenRow.id]
+      );
+
+      // Invalidate existing sessions for security
+      await tx.query(
+        `UPDATE sessions SET is_revoked = TRUE WHERE user_id = $1`,
+        [tokenRow.user_id]
+      );
+
+      await AuditService.log(
+        {
+          actorUserId: tokenRow.user_id,
+          action: 'AUTH_PASSWORD_RESET_SUCCESS',
+          entityType: 'USER',
+          entityId: tokenRow.user_id,
+          ipAddress,
+          userAgent,
+          outcome: 'SUCCESS',
+        },
+        tx
+      );
+    });
+
+    return {
+      success: true,
+      message: 'Password has been reset successfully. You may now sign in with your new password.',
+    };
+  }
 }

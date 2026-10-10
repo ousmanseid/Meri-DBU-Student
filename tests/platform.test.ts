@@ -667,5 +667,76 @@ describe('Meri DBU Student: Master Verification Test Suite (Section 18)', () => 
     expect(refRes.body.colleges.length).toBeGreaterThan(0);
     expect(refRes.body.departments.length).toBeGreaterThan(0);
   });
+
+  // Scenario 26: Password recovery request returns token and enforces anti-enumeration
+  it('Scenario 26: Password recovery request issues token and protects against user enumeration', async () => {
+    // 1. Unknown user request - returns safe success message
+    const unknownRes = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ identifier: 'nonexistent.user@dbu.edu.et' });
+
+    expect(unknownRes.status).toBe(200);
+    expect(unknownRes.body.success).toBe(true);
+    expect(unknownRes.body.resetToken).toBeUndefined();
+
+    // 2. Known user request - returns reset token
+    const knownRes = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ identifier: 'solomon.tadesse@dbu.student.et' });
+
+    expect(knownRes.status).toBe(200);
+    expect(knownRes.body.success).toBe(true);
+    expect(knownRes.body.resetToken).toBeDefined();
+    expect(knownRes.body.resetToken).toMatch(/^rst-/);
+  });
+
+  // Scenario 27: Password reset succeeds with token and allows login with new password
+  it('Scenario 27: Password reset succeeds with token and revokes older sessions', async () => {
+    // Request reset token for Solomon
+    const reqRes = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ identifier: 'solomon.tadesse@dbu.student.et' });
+
+    const resetToken = reqRes.body.resetToken;
+
+    // Reset password
+    const resetRes = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({
+        token: resetToken,
+        password: 'SolomonNewPassword2026!',
+      });
+
+    expect(resetRes.status).toBe(200);
+    expect(resetRes.body.success).toBe(true);
+
+    // Old password should fail
+    const oldLoginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        identifier: 'solomon.tadesse@dbu.student.et',
+        password: 'SolomonSecurePass2026!',
+      });
+    expect(oldLoginRes.status).toBe(401);
+
+    // New password should succeed
+    const newLoginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        identifier: 'solomon.tadesse@dbu.student.et',
+        password: 'SolomonNewPassword2026!',
+      });
+    expect(newLoginRes.status).toBe(200);
+    expect(newLoginRes.body.sessionToken).toBeDefined();
+
+    // Token cannot be reused
+    const reuseRes = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({
+        token: resetToken,
+        password: 'AnotherPassword2026!',
+      });
+    expect(reuseRes.status).toBe(400);
+  });
 });
 

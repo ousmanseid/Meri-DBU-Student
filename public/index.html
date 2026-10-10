@@ -634,7 +634,11 @@
           <input type="password" id="login-password" class="form-control" placeholder="Password" value="DbuSecure2026!">
         </div>
 
-        <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="app.executeLogin()">Sign In</button>
+        <div style="display: flex; justify-content: flex-end; margin-top: -0.5rem; margin-bottom: 1rem;">
+          <a href="#" style="font-size: 0.8rem; color: var(--dbu-primary-light); text-decoration: none;" onclick="app.openForgotPasswordModal()">Forgot Password?</a>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%; margin-top: 0.25rem;" onclick="app.executeLogin()">Sign In</button>
 
         <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--dbu-border);">
           <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--dbu-text-muted);">Quick Role Select for Evaluation:</span>
@@ -644,6 +648,44 @@
             <button class="badge badge-primary" style="cursor: pointer;" onclick="app.fillLogin('dean.ceng@dbu.edu.et')">Dean (CENG)</button>
             <button class="badge badge-success" style="cursor: pointer;" onclick="app.fillLogin('auditor@dbu.edu.et')">Auditor</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Recovery Modal -->
+  <div class="modal-overlay" id="modal-forgot-password">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="card-title">Password Recovery</h3>
+        <button class="btn-close" onclick="app.closeModal('modal-forgot-password')">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="forgot-step-1">
+          <p style="font-size: 0.9rem; color: var(--dbu-text-muted); margin-bottom: 1.25rem;">
+            Enter your institutional username or registered email address to receive a secure password recovery token.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Username or Email</label>
+            <input type="text" id="forgot-identifier" class="form-control" placeholder="e.g. admin@dbu.edu.et or username">
+          </div>
+          <button class="btn btn-primary" style="width: 100%;" onclick="app.requestPasswordReset()">Send Recovery Token</button>
+        </div>
+
+        <div id="forgot-step-2" style="display: none;">
+          <div class="badge badge-success" style="margin-bottom: 1rem;">Token Issued ✓</div>
+          <p style="font-size: 0.9rem; color: var(--dbu-text-muted); margin-bottom: 1rem;">
+            Enter the recovery token and specify your new account password.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Recovery Token</label>
+            <input type="text" id="reset-token-input" class="form-control" placeholder="rst-..." style="font-family: monospace;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password (min 8 chars)</label>
+            <input type="password" id="reset-new-password" class="form-control" placeholder="New secure password">
+          </div>
+          <button class="btn btn-primary" style="width: 100%;" onclick="app.completePasswordReset()">Reset Password & Unlock Account</button>
         </div>
       </div>
     </div>

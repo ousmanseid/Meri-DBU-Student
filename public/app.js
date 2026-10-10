@@ -682,6 +682,64 @@ class MeriApp {
     this.openModal('modal-login');
   }
 
+  openForgotPasswordModal() {
+    this.closeModal('modal-login');
+    document.getElementById('forgot-step-1').style.display = 'block';
+    document.getElementById('forgot-step-2').style.display = 'none';
+    const input = document.getElementById('forgot-identifier');
+    if (input) input.value = '';
+    this.openModal('modal-forgot-password');
+  }
+
+  async requestPasswordReset() {
+    const identifier = document.getElementById('forgot-identifier')?.value.trim();
+    if (!identifier) {
+      return this.showToast('Please provide your username or registered email.', 'warning');
+    }
+
+    try {
+      const data = await this.api('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ identifier }),
+      });
+
+      this.showToast(data.message || 'Recovery instructions dispatched.', 'success');
+      document.getElementById('forgot-step-1').style.display = 'none';
+      document.getElementById('forgot-step-2').style.display = 'block';
+      if (data.resetToken) {
+        document.getElementById('reset-token-input').value = data.resetToken;
+      }
+    } catch {
+      // Error handled in api()
+    }
+  }
+
+  async completePasswordReset() {
+    const token = document.getElementById('reset-token-input')?.value.trim();
+    const password = document.getElementById('reset-new-password')?.value;
+
+    if (!token || !password) {
+      return this.showToast('Please enter both the recovery token and new password.', 'warning');
+    }
+
+    if (password.length < 8) {
+      return this.showToast('Password must be at least 8 characters.', 'warning');
+    }
+
+    try {
+      const data = await this.api('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, password }),
+      });
+
+      this.showToast(data.message || 'Password reset successfully!', 'success');
+      this.closeModal('modal-forgot-password');
+      this.openLoginModal();
+    } catch {
+      // Error handled in api()
+    }
+  }
+
   showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;

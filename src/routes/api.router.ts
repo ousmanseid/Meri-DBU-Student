@@ -90,7 +90,14 @@ apiRouter.post('/auth/login', rateLimiter(15, 60000), async (req, res, next) => 
       req.headers['user-agent']
     );
     res.json({ success: true, ...session });
-  } catch (err) {
+  } catch (err: any) {
+    if (
+      err.message?.includes('Invalid credentials') ||
+      err.message?.includes('Account is') ||
+      err.message?.includes('Account has not been activated')
+    ) {
+      err.status = 401;
+    }
     next(err);
   }
 });
@@ -108,6 +115,35 @@ apiRouter.post('/auth/logout', requireAuth, async (req: AuthenticatedRequest, re
 
 apiRouter.get('/auth/me', requireAuth, (req: AuthenticatedRequest, res) => {
   res.json({ success: true, user: req.user });
+});
+
+const forgotPasswordSchema = z.object({
+  identifier: z.string().min(1, 'Username or email required'),
+});
+
+apiRouter.post('/auth/forgot-password', rateLimiter(10, 60000), async (req, res, next) => {
+  try {
+    const { identifier } = forgotPasswordSchema.parse(req.body);
+    const result = await AuthService.requestPasswordReset(identifier, req.ip, req.headers['user-agent']);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(5, 'Valid token required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+apiRouter.post('/auth/reset-password', rateLimiter(10, 60000), async (req, res, next) => {
+  try {
+    const { token, password } = resetPasswordSchema.parse(req.body);
+    const result = await AuthService.resetPassword(token, password, req.ip, req.headers['user-agent']);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ------------------------------------------------------------------------------
