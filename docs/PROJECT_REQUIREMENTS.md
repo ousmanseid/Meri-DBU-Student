@@ -36,6 +36,15 @@
 | **REQ-023** | `HIGH` | Security | Session revocation on logout invalidates future requests immediately. | `src/services/auth.service.ts` | Scenario 23 | `COMPLETED` |
 | **REQ-024** | `MEDIUM` | Workflows | Configurable higher-education approval workflow instances execute audited state transitions. | `src/services/workflow.service.ts` | Scenario 24 | `COMPLETED` |
 | **REQ-025** | `HIGH` | Operations | System health and reference endpoints return accurate DBU institution metadata. | `src/routes/api.router.ts` | Scenario 25 | `COMPLETED` |
+| **REQ-026** | `HIGH` | Security | Rate limiting and brute-force protection prevent credential stuffing on authentication endpoints. | `src/middleware/rate-limit.middleware.ts` | Scenario 26 | `COMPLETED` |
+| **REQ-027** | `CRITICAL` | Security | Password reset flow issues single-use expiring token and revokes older active sessions upon reset. | `src/services/auth.service.ts` | Scenario 27 | `COMPLETED` |
+| **REQ-028** | `HIGH` | Security | Institutional Document Repository enforces public vs restricted scope for anonymous visitors. | `src/services/document.service.ts` | Scenario 28 | `COMPLETED` |
+| **REQ-029** | `HIGH` | Security | Authenticated students can access STUDENT_ONLY documents but are blocked from STAFF_ONLY documents. | `src/services/document.service.ts` | Scenario 29 | `COMPLETED` |
+| **REQ-030** | `MEDIUM` | Notifications | In-app notification center records notifications, unread counts, and mark-as-read state. | `src/services/notification.service.ts` | Scenario 30 | `COMPLETED` |
+| **REQ-031** | `MEDIUM` | Notifications | User notification delivery channels configuration and system broadcasts to scoped roles. | `src/services/notification.service.ts` | Scenario 31 | `COMPLETED` |
+| **REQ-032** | `CRITICAL` | Admissions | Admissions Directorate manages freshman eligibility registry with strict RBAC and validation. | `src/services/admissions.service.ts` | Scenario 32 | `COMPLETED` |
+| **REQ-033** | `HIGH` | Governance | Registrar reviews student data corrections with atomic updates; Student Affairs processes support tickets. | `src/services/registrar.service.ts`, `src/services/student.service.ts` | Scenario 33 | `COMPLETED` |
+| **REQ-034** | `CRITICAL` | Batch Import | Native XLSX binary workbook parsing, template generation, and Registrar approval for senior enrollment. | `src/services/batch-import.service.ts` | Scenario 34 | `COMPLETED` |
 
 ---
 
@@ -44,3 +53,4 @@
 1. **National Exam ID Integration:** Current implementation verifies against `freshman_eligibility_records`. Official automated integration with Ethiopia's Ministry of Education / Educational Assessment and Examinations Service (EAES) API requires institutional API keys and authorized network gateway access.
 2. **Bulk Notification Delivery:** Verification links are recorded in `notification_delivery_attempts`. For production, SMTP relay (e.g., Ethio Telecom SMTP or SendGrid/Amazon SES) must be configured in `.env`.
 3. **Official Ethiopian Calendar Conversion:** UI displays both Gregorian (2025/2026) and Ethiopian Calendar (2018 E.C.) dates. Full Geez numeral date rendering can be enhanced in future localization updates.
+
