@@ -412,6 +412,29 @@ class MeriApp {
     window.location.href = '/api/v1/imports/template';
   }
 
+  downloadXlsxTemplate() {
+    window.location.href = '/api/v1/imports/template-xlsx';
+  }
+
+  handleSeniorFileSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) {
+      this.selectedSeniorFile = null;
+      return;
+    }
+    this.selectedSeniorFile = file;
+    if (file.name.endsWith('.csv')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('import-csv-text').value = e.target.result;
+      };
+      reader.readAsText(file);
+      this.showToast(`Loaded CSV file: ${file.name}`, 'info');
+    } else if (file.name.endsWith('.xlsx')) {
+      this.showToast(`Selected Excel workbook: ${file.name}`, 'info');
+    }
+  }
+
   loadSampleCsv() {
     const sample = [
       'student_id_number,full_name,gender,department_code,program_code,cohort_year,enrollment_status',
@@ -420,6 +443,9 @@ class MeriApp {
       'DBU/1509913,Kassahun Haile Mengistu,M,EENG,BSC_EE,2024,ACTIVE',
     ].join('\n');
     document.getElementById('import-csv-text').value = sample;
+    this.selectedSeniorFile = null;
+    const fileInput = document.getElementById('import-file-input');
+    if (fileInput) fileInput.value = '';
     this.showToast('Sample senior enrollment records loaded.', 'info');
   }
 
@@ -427,16 +453,36 @@ class MeriApp {
     const collegeId = document.getElementById('import-college').value;
     const academicYearId = document.getElementById('import-ay').value;
     const semesterId = document.getElementById('import-sem').value;
-    const csvContent = document.getElementById('import-csv-text').value.trim();
 
-    if (!csvContent) {
-      return this.showToast('Please paste or load CSV records.', 'warning');
+    let payload = { collegeId, academicYearId, semesterId };
+
+    if (this.selectedSeniorFile && this.selectedSeniorFile.name.endsWith('.xlsx')) {
+      try {
+        const arrayBuffer = await this.selectedSeniorFile.arrayBuffer();
+        let binary = '';
+        const bytes = new Uint8Array(arrayBuffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        payload.xlsxBase64 = btoa(binary);
+        payload.fileName = this.selectedSeniorFile.name;
+      } catch (err) {
+        return this.showToast('Failed to read Excel workbook: ' + err.message, 'danger');
+      }
+    } else {
+      const csvContent = document.getElementById('import-csv-text').value.trim();
+      if (!csvContent) {
+        return this.showToast('Please select an Excel (.xlsx) file, upload a CSV, or paste CSV records.', 'warning');
+      }
+      payload.csvContent = csvContent;
+      payload.fileName = this.selectedSeniorFile ? this.selectedSeniorFile.name : 'senior_enrollment.csv';
     }
 
     try {
       const data = await this.api('/imports/preview', {
         method: 'POST',
-        body: JSON.stringify({ collegeId, academicYearId, semesterId, csvContent }),
+        body: JSON.stringify(payload),
       });
 
       this.currentBatchId = data.batchId;

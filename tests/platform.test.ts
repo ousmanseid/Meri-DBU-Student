@@ -1034,5 +1034,105 @@ DBU-ET-2026-9952,UEE-880012,Meseret,Defar,F,col-chs,dept-med`;
     expect(resolveTicketRes.status).toBe(200);
     expect(resolveTicketRes.body.success).toBe(true);
   });
+
+  // Scenario 34: Native XLSX binary workbook senior student import and template generation
+  it('Scenario 34: Native XLSX binary workbook senior student import, template download, and Registrar approval', async () => {
+    // 1. Download official XLSX template
+    const templateRes = await request(app).get('/api/v1/imports/template-xlsx');
+    expect(templateRes.status).toBe(200);
+    expect(templateRes.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(templateRes.headers['content-disposition']).toContain('attachment');
+    expect(templateRes.body).toBeDefined();
+
+    // 2. Generate valid Excel workbook with senior records
+    const ExcelJS = (await import('exceljs')).default;
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Senior Batch');
+    sheet.columns = [
+      { header: 'student_id_number', key: 'student_id_number' },
+      { header: 'full_name', key: 'full_name' },
+      { header: 'gender', key: 'gender' },
+      { header: 'department_code', key: 'department_code' },
+      { header: 'program_code', key: 'program_code' },
+      { header: 'cohort_year', key: 'cohort_year' },
+      { header: 'enrollment_status', key: 'enrollment_status' },
+    ];
+
+    sheet.addRow({
+      student_id_number: 'DBU/1508991',
+      full_name: 'Biruk Bekele Gemechu',
+      gender: 'M',
+      department_code: 'COMP',
+      program_code: 'BSC_SE',
+      cohort_year: '2024',
+      enrollment_status: 'ACTIVE',
+    });
+    sheet.addRow({
+      student_id_number: 'DBU/1508992',
+      full_name: 'Tigist Lemma Desta',
+      gender: 'F',
+      department_code: 'COMP',
+      program_code: 'BSC_CS',
+      cohort_year: '2024',
+      enrollment_status: 'ACTIVE',
+    });
+
+    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+    const xlsxBase64 = buffer.toString('base64');
+
+    // 3. Dean previews XLSX upload
+    const previewRes = await request(app)
+      .post('/api/v1/imports/preview')
+      .set('Authorization', `Bearer ${deanCengToken}`)
+      .send({
+        collegeId: 'col-ceng',
+        academicYearId: 'ay-2025-2026',
+        semesterId: 'sem-2025-1',
+        fileName: 'ceng_seniors_2024.xlsx',
+        xlsxBase64,
+      });
+
+    expect(previewRes.status).toBe(200);
+    expect(previewRes.body.success).toBe(true);
+    expect(previewRes.body.totalRows).toBe(2);
+    expect(previewRes.body.validRows).toBe(2);
+    expect(previewRes.body.invalidRows).toBe(0);
+
+    const xlsxBatchId = previewRes.body.batchId;
+
+    // 4. Dean submits the parsed XLSX batch
+    const submitRes = await request(app)
+      .post(`/api/v1/imports/${xlsxBatchId}/submit`)
+      .set('Authorization', `Bearer ${deanCengToken}`);
+
+    expect(submitRes.status).toBe(200);
+    expect(submitRes.body.status).toBe('UNDER_REGISTRAR_REVIEW');
+
+    // 5. Registrar approves the submitted XLSX batch
+    const approveRes = await request(app)
+      .post(`/api/v1/registrar/batches/${xlsxBatchId}/decision`)
+      .set('Authorization', `Bearer ${registrarToken}`)
+      .send({
+        action: 'APPROVE',
+        comments: 'Verified senior XLSX workbook records against CENG departmental lists.',
+      });
+
+    expect(approveRes.status).toBe(200);
+    expect(approveRes.body.status).toBe('APPROVED');
+    expect(approveRes.body.promotedCount).toBe(2);
+
+    // 6. Senior student from XLSX batch can now verify eligibility
+    const verifyRes = await request(app)
+      .post('/api/v1/activation/senior/verify')
+      .send({
+        studentIdNumber: 'DBU/1508991',
+        fullName: 'Biruk Bekele Gemechu',
+        email: 'biruk.bekele@dbu.edu.et',
+      });
+
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.success).toBe(true);
+    expect(verifyRes.body.verificationToken).toBeDefined();
+  });
 });
 

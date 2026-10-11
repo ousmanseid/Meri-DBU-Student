@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { parse } from 'csv-parse/sync';
+import ExcelJS from 'exceljs';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb, DatabaseClient } from '../database/db.js';
 import { AuditService } from './audit.service.js';
@@ -45,6 +46,104 @@ export class BatchImportService {
     ].join('\n');
   }
 
+  // Official XLSX Workbook Template Generator
+  static async getTemplateXlsx(): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Senior Enrollment Template');
+    sheet.columns = [
+      { header: 'student_id_number', key: 'student_id_number', width: 20 },
+      { header: 'full_name', key: 'full_name', width: 30 },
+      { header: 'gender', key: 'gender', width: 10 },
+      { header: 'department_code', key: 'department_code', width: 18 },
+      { header: 'program_code', key: 'program_code', width: 16 },
+      { header: 'cohort_year', key: 'cohort_year', width: 14 },
+      { header: 'enrollment_status', key: 'enrollment_status', width: 18 },
+    ];
+
+    sheet.addRow({
+      student_id_number: 'DBU/1501234',
+      full_name: 'Yared Solomon Wolde',
+      gender: 'M',
+      department_code: 'COMP',
+      program_code: 'BSC_SE',
+      cohort_year: '2024',
+      enrollment_status: 'ACTIVE',
+    });
+    sheet.addRow({
+      student_id_number: 'DBU/1501235',
+      full_name: 'Bethlehem Kebede Tessema',
+      gender: 'F',
+      department_code: 'COMP',
+      program_code: 'BSC_CS',
+      cohort_year: '2024',
+      enrollment_status: 'ACTIVE',
+    });
+
+    const buf = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buf);
+  }
+
+  // Parse and preview Excel XLSX workbook buffer
+  static async parseAndPreviewXlsx(
+    buffer: Buffer,
+    submittingUserId: string,
+    collegeId: string,
+    academicYearId: string,
+    semesterId: string,
+    fileName: string,
+    fileSize: number
+  ): Promise<ImportPreviewResult> {
+    const fileChecksum = crypto.createHash('sha256').update(buffer).digest('hex');
+
+    const workbook = new ExcelJS.Workbook();
+    try {
+      await workbook.xlsx.load(buffer as any);
+    } catch (err: any) {
+      throw new Error(`Failed to parse Excel workbook: ${err.message}`);
+    }
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet || worksheet.rowCount < 2) {
+      throw new Error('The submitted Excel file does not contain any data rows.');
+    }
+
+    const headerRow = worksheet.getRow(1);
+    const headers: string[] = [];
+    headerRow.eachCell((cell, colNumber) => {
+      headers[colNumber] = String(cell.value || '').trim();
+    });
+
+    const records: Record<string, string>[] = [];
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const rec: Record<string, string> = {};
+      row.eachCell((cell, colNumber) => {
+        const h = headers[colNumber];
+        if (h) {
+          rec[h] = String(cell.value ?? '').trim();
+        }
+      });
+      if (Object.keys(rec).length > 0) {
+        records.push(rec);
+      }
+    });
+
+    if (records.length === 0) {
+      throw new Error('The submitted Excel workbook does not contain any valid data rows.');
+    }
+
+    return this.processRecordsValidation(
+      records,
+      submittingUserId,
+      collegeId,
+      academicYearId,
+      semesterId,
+      fileName,
+      fileSize,
+      fileChecksum
+    );
+  }
+
   // Parse and validate CSV string buffer
   static async parseAndPreviewCsv(
     csvContent: string,
@@ -55,9 +154,6 @@ export class BatchImportService {
     fileName: string,
     fileSize: number
   ): Promise<ImportPreviewResult> {
-    const db = await getDb();
-
-    // Compute SHA-256 Checksum for idempotency
     const fileChecksum = crypto.createHash('sha256').update(csvContent).digest('hex');
 
     // Parse CSV records
@@ -75,6 +171,31 @@ export class BatchImportService {
     if (records.length === 0) {
       throw new Error('The submitted CSV file does not contain any data rows.');
     }
+
+    return this.processRecordsValidation(
+      records,
+      submittingUserId,
+      collegeId,
+      academicYearId,
+      semesterId,
+      fileName,
+      fileSize,
+      fileChecksum
+    );
+  }
+
+  // Common shared record validation, duplicate detection, and draft batch persistence
+  static async processRecordsValidation(
+    records: Record<string, string>[],
+    submittingUserId: string,
+    collegeId: string,
+    academicYearId: string,
+    semesterId: string,
+    fileName: string,
+    fileSize: number,
+    fileChecksum: string
+  ): Promise<ImportPreviewResult> {
+    const db = await getDb();
 
     if (records.length > 5000) {
       throw new Error('Batch exceeds maximum supported limit of 5,000 records per upload.');

@@ -365,7 +365,10 @@
             <h2 class="card-title">Senior Student Enrollment Import Studio</h2>
             <span class="badge badge-info" id="dean-scope-badge">Scoped to: College of Computing & Engineering (CENG)</span>
           </div>
-          <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.downloadCsvTemplate()">📥 Download Official Template</button>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.downloadCsvTemplate()">📥 Download CSV Template</button>
+            <button class="btn btn-outline" style="color: var(--dbu-primary); border-color: var(--dbu-border);" onclick="app.downloadXlsxTemplate()">📊 Download Excel Template (.xlsx)</button>
+          </div>
         </div>
 
         <!-- Import Studio Form -->
@@ -393,9 +396,15 @@
             </div>
           </div>
 
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label">Upload File (.csv or .xlsx)</label>
+            <input type="file" id="import-file-input" class="form-control" accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv" onchange="app.handleSeniorFileSelect(event)">
+            <small style="color: var(--dbu-text-muted); display: block; margin-top: 0.25rem;">Supported formats: Native Excel (.xlsx) and Comma-Separated Values (.csv)</small>
+          </div>
+
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-              <label class="form-label" style="margin-bottom: 0;">CSV Data Stream / Content</label>
+              <label class="form-label" style="margin-bottom: 0;">Or Paste CSV Data Directly</label>
               <button class="btn btn-outline" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; color: var(--dbu-primary);" onclick="app.loadSampleCsv()">Load Valid Sample Data</button>
             </div>
             <textarea id="import-csv-text" class="form-control" style="font-family: monospace; font-size: 0.85rem; height: 120px;" placeholder="Paste CSV data or use sample button"></textarea>

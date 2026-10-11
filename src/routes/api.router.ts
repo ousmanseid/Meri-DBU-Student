@@ -223,13 +223,35 @@ apiRouter.get('/imports/template', (req, res) => {
   res.send(csv);
 });
 
-const previewImportSchema = z.object({
-  collegeId: z.string().min(1),
-  academicYearId: z.string().min(1),
-  semesterId: z.string().min(1),
-  csvContent: z.string().min(10, 'CSV content is required'),
-  fileName: z.string().default('senior_enrollment.csv'),
+apiRouter.get('/imports/template-xlsx', async (req, res, next) => {
+  try {
+    const buffer = await BatchImportService.getTemplateXlsx();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader('Content-Disposition', 'attachment; filename="dbu_senior_import_template.xlsx"');
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
 });
+
+const previewImportSchema = z
+  .object({
+    collegeId: z.string().min(1),
+    academicYearId: z.string().min(1),
+    semesterId: z.string().min(1),
+    csvContent: z.string().optional(),
+    xlsxBase64: z.string().optional(),
+    fileName: z.string().default('senior_enrollment.csv'),
+  })
+  .refine(
+    (data) => (data.csvContent && data.csvContent.trim().length >= 10) || Boolean(data.xlsxBase64 && data.xlsxBase64.length > 0),
+    {
+      message: 'Either valid csvContent or xlsxBase64 must be provided.',
+    }
+  );
 
 apiRouter.post(
   '/imports/preview',
@@ -239,15 +261,30 @@ apiRouter.post(
   async (req: AuthenticatedRequest, res, next) => {
     try {
       const data = previewImportSchema.parse(req.body);
-      const preview = await BatchImportService.parseAndPreviewCsv(
-        data.csvContent,
-        req.user!.userId,
-        data.collegeId,
-        data.academicYearId,
-        data.semesterId,
-        data.fileName,
-        Buffer.byteLength(data.csvContent, 'utf-8')
-      );
+      let preview;
+      if (data.xlsxBase64) {
+        const buffer = Buffer.from(data.xlsxBase64, 'base64');
+        preview = await BatchImportService.parseAndPreviewXlsx(
+          buffer,
+          req.user!.userId,
+          data.collegeId,
+          data.academicYearId,
+          data.semesterId,
+          data.fileName || 'senior_enrollment.xlsx',
+          buffer.length
+        );
+      } else {
+        const csvContent = data.csvContent!;
+        preview = await BatchImportService.parseAndPreviewCsv(
+          csvContent,
+          req.user!.userId,
+          data.collegeId,
+          data.academicYearId,
+          data.semesterId,
+          data.fileName,
+          Buffer.byteLength(csvContent, 'utf-8')
+        );
+      }
       res.json({ success: true, ...preview });
     } catch (err) {
       next(err);
